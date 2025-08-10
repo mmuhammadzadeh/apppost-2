@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">اپلیکیشن ارسال پست</string>
+    <string name="developer_name">نوشته شده توسط کدینو</string>
+    <string name="login_title">ورود به اپلیکیشن</string>
+    <string name="username_hint">نام کاربری</string>
+    <string name="password_hint">رمز عبور</string>
+    <string name="login_button_text">ورود</string>
+</resources>

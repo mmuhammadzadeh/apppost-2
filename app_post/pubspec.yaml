@@ -1,0 +1,41 @@
+name: app_post
+description: "App Post - ارسال پست"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.2.1
+  crypto: ^3.0.3
+  shared_preferences: ^2.2.2
+  # file_picker: ^5.3.1  # Temporarily disabled due to build issues
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - web/favicon.png
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: web/icons/Icon-512.png
+  android: true
+  ios: false
+  web: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "web/icons/Icon-512.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "web/icons/Icon-192.png"

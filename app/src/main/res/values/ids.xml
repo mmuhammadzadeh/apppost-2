@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="google_icon" type="id" />
+    <item name="facebook_icon" type="id" />
+    <item name="welcome_text" type="id" />
+    <item name="user_info_text" type="id" />
+    <item name="logout_button" type="id" />
+    <item name="username_text_view" type="id" />
+    <item name="website_url_text_view" type="id" />
+    <item name="connected_at_text_view" type="id" />
+    <item name="admin_panel_layout" type="id" />
+    <item name="total_users_text_view" type="id" />
+    <item name="connected_websites_recycler_view" type="id" />
+    <item name="connections_recycler_view" type="id" />
+</resources>

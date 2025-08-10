@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- مجوزها (Permissions) باید مستقیماً زیر تگ <manifest> و قبل از تگ <application> باشند -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- می‌توانید مجوزهای دیگری مانند ACCESS_NETWORK_STATE و ACCESS_WIFI_STATE را نیز اضافه کنید اگر نیاز است -->
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@drawable/logo"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/logo"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppPost"
+        tools:targetApi="31">
+
+        <!-- تعریف فعالیت‌ها در اینجا -->
+
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false">
+            <!-- If LoginActivity is launched only by SplashActivity and not directly from launcher, exported="false" is fine. -->
+            <!-- If you want it to be launchable from the home screen, change exported="true" and move the intent-filter for LAUNCHER here. -->
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false">
+            <!-- This activity typically doesn't need exported="true" unless it's launched from outside your app. -->
+        </activity>
+
+        <!-- If you have any other activities, declare them here as well -->
+
+    </application>
+
+    <!-- NO <application/> or <activity> tags should be here, outside the main <application> tag. -->
+
+</manifest>

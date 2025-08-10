@@ -1,0 +1,36 @@
+// Force plugin repositories and buildscript repos to China mirrors to bypass blocked hosts
+gradle.settingsEvaluated { s ->
+    try {
+        s.pluginManagement.repositories.clear()
+    } catch (ignored) {}
+    s.pluginManagement.repositories { repos ->
+        repos.maven { url = uri('https://maven.aliyun.com/repository/google') }
+        repos.maven { url = uri('https://maven.aliyun.com/repository/central') }
+        repos.maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+        repos.google()
+        repos.mavenCentral()
+        repos.gradlePluginPortal()
+    }
+}
+
+gradle.beforeProject { p ->
+    p.buildscript.repositories.clear()
+    p.buildscript.repositories {
+        maven { url = uri('https://maven.aliyun.com/repository/google') }
+        maven { url = uri('https://maven.aliyun.com/repository/central') }
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+        google()
+        mavenCentral()
+    }
+    if (p.hasProperty('repositories')) {
+        try { p.repositories.clear() } catch (ignored) {}
+        p.repositories {
+            maven { url = uri('https://maven.aliyun.com/repository/google') }
+            maven { url = uri('https://maven.aliyun.com/repository/central') }
+            maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+            google()
+            mavenCentral()
+        }
+    }
+}
+

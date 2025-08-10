@@ -1,0 +1,18 @@
+<?php
+
+// ### Database Configuration ###
+// Replace with your actual database credentials.
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'gtalkir_appp');
+define('DB_USERNAME', 'gtalkir_appp');
+define('DB_PASSWORD', '235689omidARYAN@#741');
+define('DB_DSN', 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4');
+
+// ### JWT Configuration ###
+// Replace with a strong, randomly generated secret key.
+define('JWT_SECRET_KEY', 'b0pW2yD8zK3xV6tL4jG1cR9sF7hA5eN0qU4mC7vB9dE2fX8gI1oP3zY5lJ6kM9nT8sQ7w');
+
+// ### Application Settings ###
+define('ONLINE_WINDOW_MINUTES', 10);
+
+?>

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background"
+    tools:context=".LoginActivity">
+
+    <!-- کارت اصلی لاگین -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/login_card_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="20dp"
+        app:cardBackgroundColor="#1E1E1E"
+        app:layout_constraintWidth_percent="0.9"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="32dp">
+
+            <!-- لوگو با انیمیشن -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/logo_container"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                app:cardCornerRadius="50dp"
+                app:cardElevation="8dp"
+                app:cardBackgroundColor="#6C5CE7"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <ImageView
+                    android:id="@+id/logo_image_view"
+                    android:layout_width="55dp"
+                    android:layout_height="55dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="App Logo"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/logo" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- عنوان اصلی -->
+            <TextView
+                android:id="@+id/welcome_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="خوش آمدید"
+                android:textColor="#E0E0E0"
+                android:textSize="16sp"
+                android:layout_marginTop="24dp"
+                android:textDirection="rtl"
+                android:gravity="center"
+                app:layout_constraintTop_toBottomOf="@+id/logo_container"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/login_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ورود به حساب کاربری"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:textDirection="rtl"
+                android:gravity="center"
+                app:layout_constraintTop_toBottomOf="@+id/welcome_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- فیلد نام کاربری -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/username_input_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:hint="نام کاربری یا ایمیل"
+                android:textColorHint="#9E9E9E"
+                android:textDirection="rtl"
+                android:layoutDirection="rtl"
+                app:boxStrokeColor="#6C5CE7"
+                app:hintTextColor="#6C5CE7"
+                app:layout_constraintTop_toBottomOf="@+id/login_title">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/username_edit_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#9E9E9E"
+                    android:textDirection="rtl"
+                    android:layoutDirection="rtl"
+                    android:gravity="start"
+                    android:textAlignment="viewStart"
+                    android:padding="16dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- فیلد رمز عبور -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/password_input_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="رمز عبور"
+                android:textColorHint="#9E9E9E"
+                android:textDirection="rtl"
+                android:layoutDirection="rtl"
+                app:boxStrokeColor="#6C5CE7"
+                app:hintTextColor="#6C5CE7"
+                app:endIconMode="password_toggle"
+                app:endIconTint="#9E9E9E"
+                app:layout_constraintTop_toBottomOf="@+id/username_input_layout">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/password_edit_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#9E9E9E"
+                    android:textDirection="rtl"
+                    android:layoutDirection="rtl"
+                    android:gravity="start"
+                    android:textAlignment="viewStart"
+                    android:padding="16dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- چک‌باکس مرا به خاطر بسپار -->
+            <CheckBox
+                android:id="@+id/remember_me_checkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="مرا به خاطر بسپار"
+                android:textColor="#E0E0E0"
+                android:textSize="14sp"
+                android:layout_marginTop="16dp"
+                android:buttonTint="#6C5CE7"
+                android:textDirection="rtl"
+                android:layoutDirection="rtl"
+                app:layout_constraintTop_toBottomOf="@+id/password_input_layout"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <!-- دکمه ورود -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/login_button"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="ورود"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#6C5CE7"
+                app:cornerRadius="16dp"
+                android:layout_marginTop="32dp"
+                android:textDirection="rtl"
+                android:gravity="center"
+                app:layout_constraintTop_toBottomOf="@+id/remember_me_checkbox" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- اندیکاتور بارگذاری -->
+    <ProgressBar
+        android:id="@+id/loading_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:indeterminateTint="#6C5CE7"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
