@@ -29,7 +29,7 @@ class User {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
-      fullName: json.containsKey('full_name') ? json['full_name'] : '',
+      fullName: json['full_name'] ?? '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
       createdAt:
