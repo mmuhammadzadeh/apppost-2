@@ -1195,9 +1195,14 @@ class _AdminPanelState extends State<AdminPanel>
                           ),
                           title: Row(
                             children: <Widget>[
-                              Text(
-                                user.username,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Text(
+                                  user.username,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               if (user.isActive == 0)
