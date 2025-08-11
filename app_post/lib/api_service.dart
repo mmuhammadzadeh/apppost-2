@@ -14,46 +14,47 @@ class ApiService {
     try {
       print('Attempting login for username: $username');
       print('API URL: $baseUrl');
-      
-    final response = await http.post(
-      Uri.parse(baseUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'action': 'login',
-        'username': username,
-        'password': password,
-      }),
-    );
+
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'login',
+          'username': username,
+          'password': password,
+        }),
+      );
 
       print('Response status code: ${response.statusCode}');
       print('Response body: ${response.body}');
 
-    // بررسی پاسخ سرور
+      // بررسی پاسخ سرور
       if (response.statusCode != 200) {
         throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
       }
-      
+
       if (response.body.isEmpty) {
         throw "پاسخ سرور خالی است";
-    }
+      }
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
       print('Parsed response data: $data');
 
-    // بررسی موفقیت‌آمیز بودن ورود و وجود توکن
-    if (data['success'] == true && data['token'] != null) {
+      // بررسی موفقیت‌آمیز بودن ورود و وجود توکن
+      if (data['success'] == true && data['token'] != null) {
         print('Login successful, token received');
-      // استفاده از factory constructor مخصوص ورود
-      return User.fromLoginJson(data['user'], data['token']);
-    } else {
-      // نمایش پیام خطا در صورت ناموفق بودن ورود
+        // استفاده از factory constructor مخصوص ورود
+        return User.fromLoginJson(data['user'], data['token']);
+      } else {
+        // نمایش پیام خطا در صورت ناموفق بودن ورود
         final errorMessage = data['message'] ?? data['error'] ?? 'خطا در ورود';
         print('Login failed: $errorMessage');
         throw errorMessage;
       }
     } catch (e) {
       print('Exception during login: $e');
-      if (e.toString().contains('SocketException') || e.toString().contains('Connection refused')) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
         throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
       } else if (e.toString().contains('TimeoutException')) {
         throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
@@ -111,9 +112,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'action': 'heartbeat',
-        }),
+        body: jsonEncode({'action': 'heartbeat'}),
       );
       if (response.statusCode != 200) {
         throw 'heartbeat http ${response.statusCode}';
@@ -125,7 +124,10 @@ class ApiService {
   }
 
   // خروج کاربر و آفلاین کردن وضعیت
-  static Future<void> logout({required String token, required int userId}) async {
+  static Future<void> logout({
+    required String token,
+    required int userId,
+  }) async {
     try {
       await http.post(
         Uri.parse(baseUrl),
@@ -133,9 +135,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'action': 'logout',
-        }),
+        body: jsonEncode({'action': 'logout'}),
       );
     } catch (_) {}
   }
@@ -221,9 +221,7 @@ class ApiService {
     final uri = Uri.parse('$baseUrl?action=get_users&token=$adminToken');
     final response = await http.get(
       uri,
-      headers: {
-        'Authorization': 'Bearer $adminToken',
-      },
+      headers: {'Authorization': 'Bearer $adminToken'},
     );
 
     print('getUsers response.body:');
@@ -273,7 +271,7 @@ class ApiService {
   }
 
   // متد ایجاد پست جدید (از پنل مدیریت فلاتر حذف شد اما در API باقی می‌ماند)
-  static Future<void> createPost({
+  static Future<Map<String, dynamic>> createPost({
     required String token,
     required String title,
     required String content,
@@ -304,6 +302,8 @@ class ApiService {
     if (!data['success']) {
       throw Exception(data['message']);
     }
+
+    return data;
   }
 
   // متد ویرایش پست
