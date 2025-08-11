@@ -63,6 +63,42 @@ class ApiService {
     }
   }
 
+  // متد ویرایش کاربر (فقط برای مدیران)
+  static Future<String> updateUser({
+    required String adminToken,
+    required Map<String, dynamic> userData,
+  }) async {
+    final Map<String, dynamic> requestBody = {
+      'action': 'update_user',
+      ...userData,
+    };
+
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $adminToken',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        return data['message'] ?? 'کاربر با موفقیت به‌روزرسانی شد.';
+      } else {
+        throw data['message'] ?? 'خطا در به‌روزرسانی کاربر.';
+      }
+    } else {
+      try {
+        final data = jsonDecode(response.body);
+        throw data['message'] ?? 'خطا در ارتباط با سرور: ${response.statusCode}';
+      } catch (_) {
+        throw 'خطا در ارتباط با سرور: ${response.statusCode}';
+      }
+    }
+  }
+
   // بروزرسانی حضور کاربر (heartbeat)
   static Future<void> pingPresence({
     required String token,
@@ -142,6 +178,41 @@ class ApiService {
       return "کاربر با موفقیت ساخته شد";
     } else {
       throw data['message'] ?? 'خطا در ساخت کاربر';
+    }
+  }
+
+  // متد حذف کاربر (فقط برای مدیران)
+  static Future<String> deleteUser({
+    required String adminToken,
+    required int userId,
+  }) async {
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $adminToken',
+      },
+      body: jsonEncode({
+        'action': 'delete_user',
+        'user_id': userId,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        return data['message'] ?? 'کاربر با موفقیت حذف شد.';
+      } else {
+        throw data['message'] ?? 'خطا در حذف کاربر.';
+      }
+    } else {
+      // تلاش برای خواندن پیام خطا از بدنه پاسخ
+      try {
+        final data = jsonDecode(response.body);
+        throw data['message'] ?? 'خطا در ارتباط با سرور: ${response.statusCode}';
+      } catch (_) {
+        throw 'خطا در ارتباط با سرور: ${response.statusCode}';
+      }
     }
   }
 

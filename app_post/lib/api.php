@@ -677,6 +677,129 @@ switch ($action) {
       }
       break;
 
+  case 'update_user':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          http_response_code(405);
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload || $payload['role'] !== 'admin') {
+          http_response_code(403);
+          echo json_encode(['success' => false, 'message' => 'دسترسی غیرمجاز']);
+          exit();
+      }
+
+      $userIdToUpdate = intval($input['user_id'] ?? 0);
+      if (!$userIdToUpdate) {
+          http_response_code(400);
+          echo json_encode(['success' => false, 'message' => 'شناسه کاربر برای ویرایش الزامی است.']);
+          exit();
+      }
+
+      $fields = [];
+      $params = [];
+
+      if (isset($input['username'])) {
+          $fields[] = "username = ?";
+          $params[] = trim($input['username']);
+      }
+      if (isset($input['email'])) {
+          $fields[] = "email = ?";
+          $params[] = trim($input['email']);
+      }
+      if (isset($input['full_name'])) {
+          $fields[] = "full_name = ?";
+          $params[] = trim($input['full_name']);
+      }
+      if (isset($input['role'])) {
+          if ($userIdToUpdate === (int)$payload['user_id']) {
+              http_response_code(400);
+              echo json_encode(['success' => false, 'message' => 'شما نمی‌توانید نقش کاربری خودتان را تغییر دهید.']);
+              exit();
+          }
+          $fields[] = "role = ?";
+          $params[] = $input['role'];
+      }
+      if (isset($input['is_active'])) {
+          $fields[] = "is_active = ?";
+          $params[] = intval($input['is_active']);
+      }
+      if (!empty($input['password'])) {
+          $passwordHash = password_hash(trim($input['password']), PASSWORD_DEFAULT);
+          $fields[] = "password = ?";
+          $params[] = $passwordHash;
+      }
+
+      if (empty($fields)) {
+          echo json_encode(['success' => true, 'message' => 'هیچ تغییری برای اعمال وجود نداشت.']);
+          exit();
+      }
+
+      $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?";
+      $params[] = $userIdToUpdate;
+
+      try {
+          $stmt = $pdo->prepare($sql);
+          $stmt->execute($params);
+          echo json_encode(['success' => true, 'message' => 'کاربر با موفقیت به‌روزرسانی شد.']);
+      } catch (PDOException $e) {
+          error_log("update_user: Database error for user ID $userIdToUpdate: " . $e->getMessage());
+          http_response_code(500);
+          if ($e->errorInfo[1] == 1062) {
+              echo json_encode(['success' => false, 'message' => 'نام کاربری یا ایمیل وارد شده تکراری است.']);
+          } else {
+              echo json_encode(['success' => false, 'message' => 'خطای دیتابیس هنگام به‌روزرسانی کاربر.']);
+          }
+      }
+      break;
+
+  case 'delete_user':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          http_response_code(405);
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload || $payload['role'] !== 'admin') {
+          http_response_code(403);
+          echo json_encode(['success' => false, 'message' => 'دسترسی غیرمجاز']);
+          exit();
+      }
+
+      $userIdToDelete = intval($input['user_id'] ?? 0);
+
+      if (!$userIdToDelete) {
+          http_response_code(400);
+          echo json_encode(['success' => false, 'message' => 'شناسه کاربر برای حذف الزامی است.']);
+          exit();
+      }
+
+      if ($userIdToDelete === (int)$payload['user_id']) {
+          http_response_code(400);
+          echo json_encode(['success' => false, 'message' => 'شما نمی‌توانید حساب کاربری خودتان را حذف کنید.']);
+          exit();
+      }
+
+      try {
+          $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+          $stmt->execute([$userIdToDelete]);
+
+          if ($stmt->rowCount() > 0) {
+              echo json_encode(['success' => true, 'message' => 'کاربر با موفقیت حذف شد.']);
+          } else {
+              http_response_code(404);
+              echo json_encode(['success' => false, 'message' => 'کاربری با این شناسه یافت نشد.']);
+          }
+      } catch (PDOException $e) {
+          error_log("delete_user: Database error for user ID $userIdToDelete: " . $e->getMessage());
+          http_response_code(500);
+          echo json_encode(['success' => false, 'message' => 'خطای دیتابیس هنگام حذف کاربر.']);
+      }
+      break;
+
   default:
       echo json_encode(['success' => false, 'message' => 'اکشن یافت نشد.']);
       break;

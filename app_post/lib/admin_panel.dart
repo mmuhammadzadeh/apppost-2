@@ -249,6 +249,194 @@ class _AdminPanelState extends State<AdminPanel>
     );
   }
 
+  void _showDeleteUserDialog(User user) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('تایید حذف'),
+          content: Text('آیا از حذف کاربر "${user.username}" مطمئن هستید؟ این عمل قابل بازگشت نیست.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('انصراف'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+                await _deleteUser(user);
+              },
+              child: const Text('حذف'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteUser(User user) async {
+    try {
+      final message = await ApiService.deleteUser(
+        adminToken: _adminToken,
+        userId: user.id,
+      );
+      _showSuccessSnackBar(message);
+      await _loadUsers(); // Refresh the list
+    } catch (e) {
+      _showErrorSnackBar(e.toString());
+    }
+  }
+
+  void _showEditUserDialog(User user) {
+    final formKey = GlobalKey<FormState>();
+    final usernameController = TextEditingController(text: user.username);
+    final emailController = TextEditingController(text: user.email);
+    final fullNameController = TextEditingController(text: user.fullName);
+    final passwordController = TextEditingController();
+    String selectedRole = user.role;
+    bool isActive = user.isActive == 1;
+    String? error;
+    bool loading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text('ویرایش کاربر: ${user.username}'),
+            content: SizedBox(
+              width: 400,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildTextField(
+                        controller: usernameController,
+                        label: 'نام کاربری',
+                        icon: Icons.person,
+                        validator: (value) => value == null || value.trim().isEmpty ? 'نام کاربری الزامی است' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: emailController,
+                        label: 'ایمیل',
+                        icon: Icons.email,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: fullNameController,
+                        label: 'نام کامل',
+                        icon: Icons.badge,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: passwordController,
+                        label: 'رمز عبور جدید (اختیاری)',
+                        icon: Icons.lock_outline,
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedRole,
+                        decoration: InputDecoration(
+                          labelText: 'نقش کاربر',
+                          prefixIcon: const Icon(Icons.admin_panel_settings),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'user', child: Text('کاربر عادی')),
+                          DropdownMenuItem(value: 'admin', child: Text('مدیر')),
+                        ],
+                        onChanged: user.id == widget.currentUser.id ? null : (value) {
+                          if (value != null) setState(() => selectedRole = value);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        title: const Text('کاربر فعال'),
+                        value: isActive,
+                        onChanged: (bool value) {
+                          setState(() => isActive = value);
+                        },
+                        secondary: const Icon(Icons.check_circle_outline),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        tileColor: Colors.grey[50],
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 16),
+                        Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: loading ? null : () => Navigator.pop(context),
+                child: const Text('انصراف'),
+              ),
+              ElevatedButton(
+                onPressed: loading ? null : () async {
+                  if (!formKey.currentState!.validate()) return;
+
+                  setState(() {
+                    loading = true;
+                    error = null;
+                  });
+
+                  final Map<String, dynamic> userData = {
+                    'user_id': user.id,
+                    'username': usernameController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'full_name': fullNameController.text.trim(),
+                    'role': selectedRole,
+                    'is_active': isActive ? 1 : 0,
+                  };
+
+                  final newPassword = passwordController.text.trim();
+                  if (newPassword.isNotEmpty) {
+                    userData['password'] = newPassword;
+                  }
+
+                  try {
+                    final message = await ApiService.updateUser(
+                      adminToken: _adminToken,
+                      userData: userData,
+                    );
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      _showSuccessSnackBar(message);
+                      _loadUsers(); // Refresh list
+                    }
+                  } catch (e) {
+                    setState(() {
+                      error = e.toString();
+                      loading = false;
+                    });
+                  }
+                },
+                child: loading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('ذخیره تغییرات'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _uploadFromUrl(String url) async {
     setState(() => _uploadingCover = true);
     var response = await http.post(
@@ -488,15 +676,15 @@ class _AdminPanelState extends State<AdminPanel>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red[50],
+                            color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red[200]!),
+                            border: Border.all(color: Theme.of(context).colorScheme.error),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.error_outline,
-                                color: Colors.red[700],
+                                color: Theme.of(context).colorScheme.error,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -504,7 +692,7 @@ class _AdminPanelState extends State<AdminPanel>
                                 child: Text(
                                   error!,
                                   style: TextStyle(
-                                    color: Colors.red[700],
+                                    color: Theme.of(context).colorScheme.onErrorContainer,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -1184,13 +1372,15 @@ class _AdminPanelState extends State<AdminPanel>
                           contentPadding: const EdgeInsets.all(16),
                           leading: CircleAvatar(
                             backgroundColor: user.role == 'admin'
-                                ? Colors.red.withOpacity(0.1)
-                                : Colors.blue.withOpacity(0.1),
+                                ? Theme.of(context).colorScheme.error.withOpacity(0.1)
+                                : Theme.of(context).colorScheme.primary.withOpacity(0.1),
                             child: Icon(
                               user.role == 'admin'
                                   ? Icons.admin_panel_settings
                                   : Icons.person,
-                              color: user.role == 'admin' ? Colors.red : Colors.blue,
+                              color: user.role == 'admin'
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           title: Row(
@@ -1212,12 +1402,12 @@ class _AdminPanelState extends State<AdminPanel>
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.red[100],
+                                    color: Colors.red.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
+                                  child: const Text(
                                     'غیرفعال',
-                                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                                    style: TextStyle(color: Colors.red, fontSize: 12),
                                   ),
                                 ),
                               if (user.isActive == 1)
@@ -1227,13 +1417,13 @@ class _AdminPanelState extends State<AdminPanel>
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.green[100],
+                                    color: Colors.green.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
+                                  child: const Text(
                                     'فعال',
                                     style: TextStyle(
-                                      color: Colors.green[700],
+                                      color: Colors.green,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1281,32 +1471,48 @@ class _AdminPanelState extends State<AdminPanel>
                               ),
                             ],
                           ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: user.role == 'admin'
-                                  ? Colors.red[50]
-                                  : Colors.blue[50],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: user.role == 'admin'
-                                    ? Colors.red[200]!
-                                    : Colors.blue[200]!,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: user.role == 'admin'
+                                      ? Theme.of(context).colorScheme.error.withOpacity(0.1)
+                                      : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: user.role == 'admin'
+                                        ? Theme.of(context).colorScheme.error
+                                        : Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                child: Text(
+                                  user.role == 'admin' ? 'مدیر' : 'کاربر',
+                                  style: TextStyle(
+                                    color: user.role == 'admin'
+                                        ? Theme.of(context).colorScheme.error
+                                        : Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              user.role == 'admin' ? 'مدیر' : 'کاربر',
-                              style: TextStyle(
-                                color: user.role == 'admin'
-                                    ? Colors.red[700]
-                                    : Colors.blue[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                              IconButton(
+                                icon: Icon(Icons.edit_outlined, color: Theme.of(context).colorScheme.primary),
+                                tooltip: 'ویرایش کاربر',
+                                onPressed: () => _showEditUserDialog(user),
                               ),
-                            ),
+                              if (user.id != widget.currentUser.id)
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                                  tooltip: 'حذف کاربر',
+                                  onPressed: () => _showDeleteUserDialog(user),
+                                ),
+                            ],
                           ),
                         ),
                       );
