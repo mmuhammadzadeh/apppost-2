@@ -145,6 +145,77 @@ class ApiService {
     }
   }
 
+  // متد ویرایش کاربر (فقط برای مدیران)
+  static Future<String> updateUser({
+    required String adminToken,
+    required int userId,
+    required String username,
+    required String email,
+    required String fullName,
+    required String role,
+    required int isActive,
+  }) async {
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $adminToken',
+      },
+      body: jsonEncode({
+        'action': 'update_user',
+        'user_id': userId,
+        'username': username,
+        'email': email,
+        'full_name': fullName,
+        'role': role,
+        'is_active': isActive,
+      }),
+    );
+
+    // بررسی پاسخ سرور
+    if (response.statusCode != 200 || response.body.isEmpty) {
+      throw "پاسخ سرور معتبر نیست. لطفاً سرور را بررسی کنید.";
+    }
+
+    final data = jsonDecode(response.body);
+
+    // بررسی موفقیت‌آمیز بودن ویرایش کاربر
+    if (data['success'] == true) {
+      return "کاربر با موفقیت ویرایش شد";
+    } else {
+      throw data['message'] ?? 'خطا در ویرایش کاربر';
+    }
+  }
+
+  // متد حذف کاربر (فقط برای مدیران)
+  static Future<String> deleteUser({
+    required String adminToken,
+    required int userId,
+  }) async {
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $adminToken',
+      },
+      body: jsonEncode({'action': 'delete_user', 'user_id': userId}),
+    );
+
+    // بررسی پاسخ سرور
+    if (response.statusCode != 200 || response.body.isEmpty) {
+      throw "پاسخ سرور معتبر نیست. لطفاً سرور را بررسی کنید.";
+    }
+
+    final data = jsonDecode(response.body);
+
+    // بررسی موفقیت‌آمیز بودن حذف کاربر
+    if (data['success'] == true) {
+      return "کاربر با موفقیت حذف شد";
+    } else {
+      throw data['message'] ?? 'خطا در حذف کاربر';
+    }
+  }
+
   // متد دریافت لیست کاربران
   static Future<List<User>> getUsers(String adminToken) async {
     final uri = Uri.parse('$baseUrl?action=get_users&token=$adminToken');

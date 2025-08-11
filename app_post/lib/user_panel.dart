@@ -122,42 +122,101 @@ class _UserPanelState extends State<UserPanel>
     });
 
     try {
-      final postData = {
-        'artist': _artistController.text,
-        'artist_en': _artistEnController.text,
-        'song': _songController.text,
-        'song_en': _songEnController.text,
-        'url_320': _url320Controller.text,
-        'url_128': _url128Controller.text,
-        'url_teaser': _urlTeaserController.text,
-        'lyric': _lyricController.text,
-        'cover_url': _coverUrl,
-        'template_index': _selectedTemplateIndex,
-      };
+      final uriObj = Uri.parse('https://kingmusics.com');
+      final host = uriObj.host.replaceFirst('www.', '');
+      final hashString = '1234$host' + '6789';
+      final hash = md5.convert(utf8.encode(hashString)).toString();
 
-      // ارسال به API
-      final response = await http.post(
-        Uri.parse('https://your-api-endpoint.com/send-post'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(postData),
+      int? sampleValue;
+      if (_selectedTemplateIndex != null) {
+        final parsed = int.tryParse(_selectedTemplateIndex.toString());
+        sampleValue = parsed;
+      }
+
+      await ApiService.sendPostToWordPressEasyPoster(
+        siteUrl: 'https://kingmusics.com',
+        artist: _artistController.text.trim(),
+        song: _songController.text.trim(),
+        artistEn: _artistEnController.text.trim(),
+        songEn: _songEnController.text.trim(),
+        url320: _url320Controller.text.trim(),
+        url128: _url128Controller.text.trim(),
+        urlTeaser: _urlTeaserController.text.trim(),
+        urlImage: _urlImageController.text.trim(),
+        lyric: _lyricController.text.trim(),
+        sample: sampleValue,
+        author: null,
       );
 
-      if (response.statusCode == 200) {
+      if (mounted) {
         _showSuccessSnackBar('پست با موفقیت ارسال شد!');
         _clearForm();
-      } else {
-        setState(() {
-          _error = 'خطا در ارسال پست: ${response.statusCode}';
-        });
       }
     } catch (e) {
       setState(() {
-        _error = 'خطا: ${e.toString()}';
+        _error = e.toString();
       });
     } finally {
       setState(() {
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _pickImageAndUpload() async {
+    // File picker functionality temporarily disabled due to build issues
+    // Temporary alternative: Use URL upload
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'برای آپلود عکس، لطفاً از گزینه "آپلود از URL" استفاده کنید',
+        ),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _uploadFromUrl(String url) async {
+    setState(() => _uploadingCover = true);
+    var response = await http.post(
+      Uri.parse('http://image.musichan.ir/api_cover.php'),
+      body: {'url': url},
+    );
+    var data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      setState(() => _coverUrl = data['url']);
+      _urlImageController.text = data['url'];
+    } else {
+      setState(() => _error = data['msg'] ?? 'خطا در آپلود کاور');
+    }
+    setState(() => _uploadingCover = false);
+  }
+
+  Future<void> _searchImages(String query) async {
+    setState(() {
+      _searchResults = [];
+      _searchError = null;
+    });
+    try {
+      final apiKey = 'AIzaSyAmV0rkBS-N0MEmvPIp3zMr8tnvTIkDm0A';
+      final cx =
+          '176cf4baf2bf042e7'; // باید CX را از Google Custom Search Console بگیری
+      final url =
+          'https://www.googleapis.com/customsearch/v1?q=${Uri.encodeComponent(query)}&cx=$cx&searchType=image&key=$apiKey&num=10';
+      final response = await http.get(Uri.parse(url));
+      final data = jsonDecode(response.body);
+      if (data['items'] != null) {
+        setState(() {
+          _searchResults = List<String>.from(
+            data['items'].map((item) => item['link']),
+          );
+        });
+      } else {
+        setState(() => _searchError = 'نتیجه‌ای یافت نشد');
+      }
+    } catch (e) {
+      setState(() => _searchError = 'خطا در جستجوی عکس');
     }
   }
 
@@ -169,9 +228,12 @@ class _UserPanelState extends State<UserPanel>
     _url320Controller.clear();
     _url128Controller.clear();
     _urlTeaserController.clear();
+    _urlImageController.clear();
     _lyricController.clear();
-    _coverUrl = null;
-    _searchResults.clear();
+    setState(() {
+      _coverUrl = null;
+      _searchResults.clear();
+    });
   }
 
   void _showSuccessSnackBar(String message) {
@@ -355,578 +417,352 @@ class _UserPanelState extends State<UserPanel>
   }
 
   Widget _buildPostsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.blue.withOpacity(0.1),
-                      child: Icon(Icons.article, color: Colors.blue, size: 32),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ارسال پست جدید',
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
+    final theme = Theme.of(context);
+    if (_loadingTemplates) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_templateError != null) {
+      return Center(
+        child: Text(
+          'خطا در دریافت الگوها: $_templateError',
+          style: const TextStyle(color: Colors.red),
+        ),
+      );
+    }
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          color: Colors.grey[900],
+          elevation: 12,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.send, color: Colors.blue[200], size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'ارسال پست به وردپرس',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'اطلاعات پست را وارد کنید',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[600]),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  DropdownButtonFormField(
+                    value: _selectedTemplateIndex,
+                    decoration: InputDecoration(
+                      labelText: 'انتخاب الگو',
+                      prefixIcon: const Icon(Icons.layers),
+                      filled: true,
+                      fillColor: Colors.grey[900],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    dropdownColor: Colors.grey[900],
+                    style: const TextStyle(color: Colors.white),
+                    items: _templates.map((template) {
+                      return DropdownMenuItem(
+                        value: template['index'],
+                        child: Text(
+                          template['name'] ?? 'الگو ${template['index']}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedTemplateIndex = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'کاور آهنگ',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _uploadingCover ? null : _pickImageAndUpload,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('آپلود از سیستم'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[800],
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _urlImageController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'یا آدرس عکس را وارد کنید',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            suffixIcon: IconButton(
+                              icon: const Icon(
+                                Icons.cloud_upload,
+                                color: Colors.blue,
+                              ),
+                              onPressed: _uploadingCover
+                                  ? null
+                                  : () => _uploadFromUrl(
+                                      _urlImageController.text,
+                                    ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'نام خواننده برای جستجوی عکس',
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.search, color: Colors.blue),
+                        onPressed: () async {
+                          await _searchImages(_artistController.text);
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[900],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (value) async {
+                      await _searchImages(value);
+                    },
+                  ),
+                  if (_searchResults.isNotEmpty)
+                    SizedBox(
+                      height: 100,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: _searchResults
+                            .map(
+                              (imgUrl) => GestureDetector(
+                                onTap: () => _uploadFromUrl(imgUrl),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Image.network(
+                                    imgUrl,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  if (_coverUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Image.network(_coverUrl!, height: 120),
+                    ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    controller: _artistController,
+                    label: 'نام خواننده (فارسی)',
+                    icon: Icons.person,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'خواننده الزامی است' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _artistEnController,
+                    label: 'نام خواننده (انگلیسی)',
+                    icon: Icons.person_outline,
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'خواننده انگلیسی الزامی است'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _songController,
+                    label: 'نام آهنگ (فارسی)',
+                    icon: Icons.music_note,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'نام آهنگ الزامی است' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _songEnController,
+                    label: 'نام آهنگ (انگلیسی)',
+                    icon: Icons.music_video,
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'نام آهنگ انگلیسی الزامی است'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _url320Controller,
+                    label: 'لینک فایل ۳۲۰',
+                    icon: Icons.link,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _url128Controller,
+                    label: 'لینک فایل ۱۲۸',
+                    icon: Icons.link,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _urlTeaserController,
+                    label: 'لینک تیزر تصویری',
+                    icon: Icons.video_library,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _lyricController,
+                    label: 'متن ترانه',
+                    icon: Icons.lyrics,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'متن ترانه الزامی است' : null,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
+                  if (_error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[900],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[700]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red[200],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Template Selection
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'انتخاب الگو',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
                     const SizedBox(height: 16),
-                    if (_loadingTemplates)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_templateError != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.error, color: Colors.red, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _templateError!,
-                                style: TextStyle(color: Colors.red[700]),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.refresh, color: Colors.red),
-                              onPressed: _fetchTemplates,
-                              tooltip: 'تلاش مجدد',
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (_templates.isNotEmpty)
-                      DropdownButtonFormField<dynamic>(
-                        value: _selectedTemplateIndex,
-                        decoration: InputDecoration(
-                          labelText: 'الگوی پست',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          prefixIcon: Icon(Icons.format_align_left),
-                        ),
-                        items: _templates.map((template) {
-                          return DropdownMenuItem(
-                            value: template['index'],
-                            child: Text(
-                              template['name'] ?? 'الگوی ${template['index']}',
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedTemplateIndex = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'لطفاً یک الگو انتخاب کنید';
-                          }
-                          return null;
-                        },
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.orange.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning, color: Colors.orange, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'هیچ الگویی یافت نشد',
-                                style: TextStyle(color: Colors.orange[700]),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.refresh, color: Colors.orange),
-                              onPressed: _fetchTemplates,
-                              tooltip: 'تلاش مجدد',
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Artist Information
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'اطلاعات هنرمند',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _artistController,
-                            decoration: InputDecoration(
-                              labelText: 'نام هنرمند (فارسی)',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.person),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'لطفاً نام هنرمند را وارد کنید';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _artistEnController,
-                            decoration: InputDecoration(
-                              labelText: 'نام هنرمند (انگلیسی)',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.person_outline),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'لطفاً نام هنرمند به انگلیسی را وارد کنید';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Song Information
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'اطلاعات آهنگ',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _songController,
-                            decoration: InputDecoration(
-                              labelText: 'نام آهنگ (فارسی)',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.music_note),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'لطفاً نام آهنگ را وارد کنید';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _songEnController,
-                            decoration: InputDecoration(
-                              labelText: 'نام آهنگ (انگلیسی)',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.music_note_outlined),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'لطفاً نام آهنگ به انگلیسی را وارد کنید';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Download URLs
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'لینک‌های دانلود',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _url320Controller,
-                      decoration: InputDecoration(
-                        labelText: 'لینک دانلود کیفیت 320',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(Icons.download),
-                        hintText: 'https://example.com/song-320.mp3',
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً لینک دانلود 320 را وارد کنید';
-                        }
-                        final uri = Uri.tryParse(value);
-                        if (uri == null || !uri.hasAbsolutePath) {
-                          return 'لطفاً یک لینک معتبر وارد کنید';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _url128Controller,
-                      decoration: InputDecoration(
-                        labelText: 'لینک دانلود کیفیت 128',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(Icons.download_done),
-                        hintText: 'https://example.com/song-128.mp3',
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً لینک دانلود 128 را وارد کنید';
-                        }
-                        final uri = Uri.tryParse(value);
-                        if (uri == null || !uri.hasAbsolutePath) {
-                          return 'لطفاً یک لینک معتبر وارد کنید';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _urlTeaserController,
-                      decoration: InputDecoration(
-                        labelText: 'لینک تیزر (اختیاری)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(Icons.play_circle_outline),
-                        hintText: 'https://example.com/song-teaser.mp3',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Cover Image
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'تصویر کاور',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _urlImageController,
-                            decoration: InputDecoration(
-                              labelText: 'لینک تصویر کاور',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.image),
-                              hintText: 'https://example.com/cover.jpg',
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _coverUrl = value.isNotEmpty ? value : null;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        if (_coverUrl != null && _coverUrl!.isNotEmpty)
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                _coverUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[200],
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: Colors.grey[400],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Lyrics
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'متن آهنگ',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _lyricController,
-                      maxLines: 5,
-                      decoration: InputDecoration(
-                        labelText: 'متن آهنگ (اختیاری)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        prefixIcon: Icon(Icons.lyrics),
-                        hintText: 'متن آهنگ را اینجا وارد کنید...',
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Error Display
-            if (_error != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: TextStyle(color: Colors.red[700]),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 24),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _sendPost,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: _loading
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
+                  ElevatedButton.icon(
+                    onPressed: _loading ? null : _sendPost,
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                              color: Colors.white,
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text('در حال ارسال...'),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.send, size: 24),
-                          const SizedBox(width: 12),
-                          Text(
-                            'ارسال پست',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                          )
+                        : const Icon(Icons.send),
+                    label: const Text('ارسال پست'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[800],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.grey[900],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey[700]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue[400]!, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        labelStyle: const TextStyle(color: Colors.white70),
+        floatingLabelStyle: TextStyle(color: Colors.blue[200]),
+      ),
+      style: const TextStyle(color: Colors.white),
     );
   }
 

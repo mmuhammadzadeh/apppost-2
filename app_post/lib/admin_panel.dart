@@ -111,6 +111,15 @@ class _AdminPanelState extends State<AdminPanel>
     _heartbeatTimer = Timer.periodic(const Duration(minutes: 3), (timer) {
       _sendHeartbeat();
     });
+
+    // تایمر برای بروزرسانی وضعیت آنلاین کاربران (هر دقیقه)
+    Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // فقط UI را بروزرسانی می‌کنیم تا وضعیت آنلاین محاسبه شود
+        });
+      }
+    });
   }
 
   void _sendHeartbeat() {
@@ -145,6 +154,87 @@ class _AdminPanelState extends State<AdminPanel>
     _urlImageController.dispose();
     _lyricController.dispose();
     super.dispose();
+  }
+
+  // بررسی آنلاین بودن کاربر بر اساس آخرین فعالیت (10 دقیقه)
+  bool _isUserOnline(User user) {
+    if (user.lastSeen == null) return false;
+
+    final now = DateTime.now();
+    final lastSeen = user.lastSeen!;
+    final difference = now.difference(lastSeen);
+
+    // کاربر آنلاین است اگر در 10 دقیقه گذشته فعالیت داشته باشد
+    return difference.inMinutes <= 10;
+  }
+
+  // بروزرسانی آخرین فعالیت کاربر فعلی
+  void _updateCurrentUserActivity() {
+    // این متد می‌تواند برای بروزرسانی lastSeen کاربر فعلی استفاده شود
+    // در حال حاضر از heartbeat استفاده می‌کنیم
+  }
+
+  // بررسی فعالیت اخیر کاربر (1 ساعت گذشته)
+  bool _isUserRecentlyActive(User user) {
+    if (user.lastSeen == null) return false;
+
+    final now = DateTime.now();
+    final lastSeen = user.lastSeen!;
+    final difference = now.difference(lastSeen);
+
+    // کاربر اخیراً فعال است اگر در 1 ساعت گذشته فعالیت داشته باشد
+    return difference.inHours <= 1;
+  }
+
+  // کارت جزئیات فعالیت
+  Widget _buildActivityDetailCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 25,
+              backgroundColor: color.withOpacity(0.1),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadUsers() async {
@@ -385,6 +475,286 @@ class _AdminPanelState extends State<AdminPanel>
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _showUserDetailsDialog(User user) {
+    final formKey = GlobalKey<FormState>();
+    final usernameController = TextEditingController(text: user.username);
+    final emailController = TextEditingController(text: user.email);
+    final fullNameController = TextEditingController(text: user.fullName);
+    String selectedRole = user.role;
+    int selectedStatus = user.isActive;
+    String? error;
+    bool loading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.edit, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Text('ویرایش کاربر: ${user.username}'),
+              ],
+            ),
+            content: SizedBox(
+              width: 400,
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildTextField(
+                        controller: usernameController,
+                        label: 'نام کاربری',
+                        icon: Icons.person,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'نام کاربری الزامی است';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: emailController,
+                        label: 'ایمیل',
+                        icon: Icons.email,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
+                              return 'فرمت ایمیل صحیح نیست';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: fullNameController,
+                        label: 'نام کامل',
+                        icon: Icons.badge,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedRole,
+                        decoration: InputDecoration(
+                          labelText: 'نقش کاربر',
+                          prefixIcon: const Icon(Icons.admin_panel_settings),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'user',
+                            child: Text('کاربر عادی'),
+                          ),
+                          DropdownMenuItem(value: 'admin', child: Text('مدیر')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) selectedRole = value;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<int>(
+                        value: selectedStatus,
+                        decoration: InputDecoration(
+                          labelText: 'وضعیت کاربر',
+                          prefixIcon: const Icon(Icons.person_pin),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 1, child: Text('فعال')),
+                          DropdownMenuItem(value: 0, child: Text('غیرفعال')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) selectedStatus = value;
+                        },
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  error!,
+                                  style: TextStyle(
+                                    color: Colors.red[700],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: loading ? null : () => Navigator.pop(context),
+                child: const Text('انصراف'),
+              ),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+
+                        setState(() {
+                          loading = true;
+                          error = null;
+                        });
+
+                        try {
+                          await ApiService.updateUser(
+                            adminToken: _adminToken,
+                            userId: user.id,
+                            username: usernameController.text.trim(),
+                            email: emailController.text.trim(),
+                            fullName: fullNameController.text.trim(),
+                            role: selectedRole,
+                            isActive: selectedStatus,
+                          );
+
+                          HapticFeedback.mediumImpact();
+                          if (mounted) Navigator.pop(context);
+                          _showSuccessSnackBar('کاربر با موفقیت ویرایش شد');
+                          await _loadUsers();
+                        } catch (e) {
+                          HapticFeedback.heavyImpact();
+                          setState(() => error = e.toString());
+                        } finally {
+                          setState(() => loading = false);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('ویرایش'),
+              ),
+              ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        // Show confirmation dialog
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('تأیید حذف'),
+                            content: Text(
+                              'آیا از حذف کاربر "${user.username}" اطمینان دارید؟ این عمل قابل بازگشت نیست.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('انصراف'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                                child: const Text('حذف'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed == true) {
+                          setState(() {
+                            loading = true;
+                            error = null;
+                          });
+
+                          try {
+                            await ApiService.deleteUser(
+                              adminToken: _adminToken,
+                              userId: user.id,
+                            );
+
+                            HapticFeedback.mediumImpact();
+                            if (mounted) Navigator.pop(context);
+                            _showSuccessSnackBar('کاربر با موفقیت حذف شد');
+                            await _loadUsers();
+                          } catch (e) {
+                            HapticFeedback.heavyImpact();
+                            setState(() => error = e.toString());
+                          } finally {
+                            setState(() => loading = false);
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('حذف'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showCreateUserDialog() {
@@ -1068,20 +1438,7 @@ class _AdminPanelState extends State<AdminPanel>
         controller: _tabController,
         children: [_buildDashboardTab(), _buildUsersTab(), _buildPostsTab()],
       ),
-      floatingActionButton: _getFloatingActionButton(),
     );
-  }
-
-  Widget? _getFloatingActionButton() {
-    // Show FAB on Dashboard and Users tabs
-    if (_currentTabIndex == 0 || _currentTabIndex == 1) {
-      return FloatingActionButton.extended(
-        onPressed: _showCreateUserDialog,
-        icon: const Icon(Icons.person_add),
-        label: const Text('افزودن کاربر'),
-      );
-    }
-    return null;
   }
 
   Widget _buildQuickActionCard({
@@ -1404,7 +1761,7 @@ class _AdminPanelState extends State<AdminPanel>
                 child: _buildStatsCard(
                   title: 'کاربران آنلاین',
                   value:
-                      '${_users.where((user) => user.isOnline ?? false).length}',
+                      '${_users.where((user) => _isUserOnline(user)).length}',
                   icon: Icons.wifi,
                   color: Colors.green,
                 ),
@@ -1464,6 +1821,55 @@ class _AdminPanelState extends State<AdminPanel>
                   onTap: () {
                     _tabController.animateTo(1);
                   },
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 32),
+
+          // User Activity Details Section
+          Text(
+            'جزئیات فعالیت کاربران',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildActivityDetailCard(
+                  title: 'کاربران آنلاین',
+                  value:
+                      '${_users.where((user) => _isUserOnline(user)).length}',
+                  subtitle: 'فعال در 10 دقیقه گذشته',
+                  icon: Icons.wifi,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActivityDetailCard(
+                  title: 'کاربران اخیر',
+                  value:
+                      '${_users.where((user) => _isUserRecentlyActive(user)).length}',
+                  subtitle: 'فعال در 1 ساعت گذشته',
+                  icon: Icons.access_time,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActivityDetailCard(
+                  title: 'کاربران آفلاین',
+                  value:
+                      '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
+                  subtitle: 'غیرفعال بیش از 1 ساعت',
+                  icon: Icons.offline_bolt,
+                  color: Colors.grey,
                 ),
               ),
             ],
@@ -1573,26 +1979,25 @@ class _AdminPanelState extends State<AdminPanel>
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
+        // Header with user count
+        Container(
+          padding: const EdgeInsets.all(16),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: _buildStatsCard(
-                  title: 'کل کاربران',
-                  value: '${_users.length}',
-                  icon: Icons.people,
-                  color: Colors.blue,
-                ),
+              Text(
+                'لیست کاربران (${_users.length})',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatsCard(
-                  title: 'کاربران آنلاین',
-                  value:
-                      '${_users.where((user) => user.isOnline ?? false).length}',
-                  icon: Icons.wifi,
-                  color: Colors.green,
+              ElevatedButton.icon(
+                onPressed: _showCreateUserDialog,
+                icon: const Icon(Icons.person_add),
+                label: const Text('افزودن کاربر'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
                 ),
               ),
             ],
@@ -1618,7 +2023,7 @@ class _AdminPanelState extends State<AdminPanel>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'اولین کاربر را با استفاده از دکمه پایین اضافه کنید',
+                        'اولین کاربر را با استفاده از دکمه بالا اضافه کنید',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[500],
                         ),
@@ -1639,136 +2044,140 @@ class _AdminPanelState extends State<AdminPanel>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          leading: CircleAvatar(
-                            backgroundColor: user.role == 'admin'
-                                ? Colors.red.withOpacity(0.1)
-                                : Colors.blue.withOpacity(0.1),
-                            child: Icon(
-                              user.role == 'admin'
-                                  ? Icons.admin_panel_settings
-                                  : Icons.person,
-                              color: user.role == 'admin'
-                                  ? Colors.red
-                                  : Colors.blue,
-                            ),
-                          ),
-                          title: Row(
-                            children: <Widget>[
-                              Text(
-                                user.username,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        child: InkWell(
+                          onTap: () => _showUserDetailsDialog(user),
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: CircleAvatar(
+                              backgroundColor: user.role == 'admin'
+                                  ? Colors.red.withOpacity(0.1)
+                                  : Colors.blue.withOpacity(0.1),
+                              child: Icon(
+                                user.role == 'admin'
+                                    ? Icons.admin_panel_settings
+                                    : Icons.person,
+                                color: user.role == 'admin'
+                                    ? Colors.red
+                                    : Colors.blue,
                               ),
-                              const SizedBox(width: 8),
-                              if (user.isActive == 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'غیرفعال',
-                                    style: TextStyle(
-                                      color: Colors.red[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              if (user.isActive == 1)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'فعال',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (user.fullName.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Text(user.fullName),
-                              ],
-                              if (user.email.isNotEmpty) ...[
-                                const SizedBox(height: 2),
+                            ),
+                            title: Row(
+                              children: <Widget>[
                                 Text(
-                                  user.email,
-                                  style: TextStyle(color: Colors.grey[600]),
+                                  user.username,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ],
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
+                                const SizedBox(width: 8),
+                                if (user.isActive == 0)
                                   Container(
-                                    width: 8,
-                                    height: 8,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: (user.isOnline ?? false)
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      shape: BoxShape.circle,
+                                      color: Colors.red[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'غیرفعال',
+                                      style: TextStyle(
+                                        color: Colors.red[700],
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    (user.isOnline ?? false)
-                                        ? 'آنلاین'
-                                        : (user.lastSeen != null
-                                              ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
-                                              : 'آفلاین'),
-                                    style: TextStyle(
-                                      color: (user.isOnline ?? false)
-                                          ? Colors.green[700]
-                                          : Colors.grey[600],
+                                if (user.isActive == 1)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
                                     ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'فعال',
+                                      style: TextStyle(
+                                        color: Colors.green[700],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (user.fullName.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(user.fullName),
+                                ],
+                                if (user.email.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    user.email,
+                                    style: TextStyle(color: Colors.grey[600]),
                                   ),
                                 ],
-                              ),
-                            ],
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: _isUserOnline(user)
+                                            ? Colors.green
+                                            : Colors.grey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isUserOnline(user)
+                                          ? 'آنلاین'
+                                          : (user.lastSeen != null
+                                                ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
+                                                : 'آفلاین'),
+                                      style: TextStyle(
+                                        color: _isUserOnline(user)
+                                            ? Colors.green[700]
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            decoration: BoxDecoration(
-                              color: user.role == 'admin'
-                                  ? Colors.red[50]
-                                  : Colors.blue[50],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: user.role == 'admin'
-                                    ? Colors.red[200]!
-                                    : Colors.blue[200]!,
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
                               ),
-                            ),
-                            child: Text(
-                              user.role == 'admin' ? 'مدیر' : 'کاربر',
-                              style: TextStyle(
+                              decoration: BoxDecoration(
                                 color: user.role == 'admin'
-                                    ? Colors.red[700]
-                                    : Colors.blue[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                    ? Colors.red[50]
+                                    : Colors.blue[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: user.role == 'admin'
+                                      ? Colors.red[200]!
+                                      : Colors.blue[200]!,
+                                ),
+                              ),
+                              child: Text(
+                                user.role == 'admin' ? 'مدیر' : 'کاربر',
+                                style: TextStyle(
+                                  color: user.role == 'admin'
+                                      ? Colors.red[700]
+                                      : Colors.blue[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ),
