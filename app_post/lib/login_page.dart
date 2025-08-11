@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'api_service.dart';
 import 'session_manager.dart';
 import 'user.dart';
+import 'app_theme.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function(User) onLogin;
@@ -83,12 +84,15 @@ class _LoginPageState extends State<LoginPage>
 
   String _getErrorMessage(String error) {
     print('Error in _getErrorMessage: $error');
-    
-    if (error.contains('network') || error.contains('SocketException') || error.contains('Connection refused')) {
+
+    if (error.contains('network') ||
+        error.contains('SocketException') ||
+        error.contains('Connection refused')) {
       return 'خطا در اتصال به شبکه. لطفاً اتصال اینترنت خود را بررسی کنید.';
     } else if (error.contains('401') || error.contains('unauthorized')) {
       return 'نام کاربری یا رمز عبور اشتباه است.';
-    } else if (error.contains('timeout') || error.contains('TimeoutException')) {
+    } else if (error.contains('timeout') ||
+        error.contains('TimeoutException')) {
       return 'زمان اتصال به پایان رسید. دوباره تلاش کنید.';
     } else if (error.contains('خطای HTTP:')) {
       return error; // نمایش خطای HTTP دقیق
@@ -97,7 +101,7 @@ class _LoginPageState extends State<LoginPage>
     } else if (error.contains('خطا در ورود')) {
       return error; // نمایش پیام خطای سرور
     }
-    
+
     // برای خطاهای دیگر، پیام کامل را نمایش دهید
     return 'خطا: $error';
   }
@@ -110,17 +114,7 @@ class _LoginPageState extends State<LoginPage>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.primaryColor.withOpacity(0.1),
-              theme.primaryColor.withOpacity(0.05),
-              Colors.white,
-            ],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: AppTheme.darkGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -153,35 +147,40 @@ class _LoginPageState extends State<LoginPage>
     return Column(
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.7)],
-            ),
+            gradient: AppTheme.primaryGradient,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: theme.primaryColor.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            boxShadow: AppTheme.primaryShadow,
           ),
-          child: const Icon(Icons.person, size: 50, color: Colors.white),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black.withOpacity(0.1),
+            ),
+            child: Icon(
+              Icons.admin_panel_settings,
+              size: 60,
+              color: Colors.black,
+            ),
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         Text(
           'خوش آمدید',
-          style: theme.textTheme.headlineMedium?.copyWith(
+          style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: theme.primaryColor,
+            color: AppTheme.primaryGold,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
           'برای ادامه وارد حساب کاربری خود شوید',
-          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -190,10 +189,14 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildLoginCard(ThemeData theme, bool isTablet) {
     return Card(
-      elevation: 8,
-      shadowColor: theme.primaryColor.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 16,
+      shadowColor: AppTheme.primaryGold.withOpacity(0.4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: AppTheme.surfaceGradient,
+        ),
         width: isTablet ? 400 : double.infinity,
         padding: const EdgeInsets.all(32.0),
         child: Column(
@@ -222,28 +225,27 @@ class _LoginPageState extends State<LoginPage>
       textDirection: TextDirection.rtl,
       decoration: InputDecoration(
         labelText: 'نام کاربری',
-        prefixIcon: const Icon(Icons.person_outline),
+        prefixIcon: Icon(Icons.person_outline, color: AppTheme.primaryGold),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: AppTheme.secondaryDark,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 2,
-          ),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.redAccent),
         ),
+        labelStyle: TextStyle(color: AppTheme.textSecondary),
+        hintStyle: TextStyle(color: AppTheme.textHint),
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
@@ -265,10 +267,11 @@ class _LoginPageState extends State<LoginPage>
       obscureText: _obscurePassword,
       decoration: InputDecoration(
         labelText: 'رمز عبور',
-        prefixIcon: const Icon(Icons.lock_outline),
+        prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primaryGold),
         suffixIcon: IconButton(
           icon: Icon(
             _obscurePassword ? Icons.visibility : Icons.visibility_off,
+            color: AppTheme.primaryGold,
           ),
           onPressed: () {
             setState(() {
@@ -277,26 +280,25 @@ class _LoginPageState extends State<LoginPage>
           },
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: AppTheme.secondaryDark,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
-            width: 2,
-          ),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.primaryGold, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppTheme.redAccent),
         ),
+        labelStyle: TextStyle(color: AppTheme.textSecondary),
+        hintStyle: TextStyle(color: AppTheme.textHint),
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
@@ -314,20 +316,35 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildErrorMessage() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red[200]!),
+        color: AppTheme.redAccent.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.redAccent.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red[700], size: 20),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.redAccent.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline,
+              color: AppTheme.redAccent,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _error!,
-              style: TextStyle(color: Colors.red[700], fontSize: 14),
+              style: TextStyle(
+                color: AppTheme.redAccent,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -336,32 +353,36 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Widget _buildLoginButton(ThemeData theme) {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 52,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppTheme.buttonShadow,
+      ),
       child: ElevatedButton(
         onPressed: _loading ? null : _login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: theme.primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: theme.primaryColor.withOpacity(0.3),
+          backgroundColor: AppTheme.primaryGold,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(20),
           ),
         ),
         child: _loading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                 ),
               )
-            : const Text(
+            : Text(
                 'ورود',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );
@@ -372,12 +393,23 @@ class _LoginPageState extends State<LoginPage>
       onPressed: () {
         // اینجا می‌تونید صفحه فراموشی رمز عبور رو اضافه کنید
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('این قابلیت به زودی اضافه خواهد شد')),
+          SnackBar(
+            content: Text('این قابلیت به زودی اضافه خواهد شد'),
+            backgroundColor: AppTheme.surfaceDark,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         );
       },
       child: Text(
         'رمز عبور خود را فراموش کرده‌اید؟',
-        style: TextStyle(color: theme.primaryColor, fontSize: 14),
+        style: TextStyle(
+          color: AppTheme.primaryGold,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

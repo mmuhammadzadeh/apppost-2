@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 // import 'package:file_picker/file_picker.dart';  // Temporarily disabled due to build issues
 import 'package:crypto/crypto.dart';
+import 'app_theme.dart';
 
 // مدل Post
 class Post {
@@ -232,6 +233,75 @@ class _AdminPanelState extends State<AdminPanel>
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedActivityDetailCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return AnimatedContainer(
+      duration: AppTheme.fastAnimation,
+      curve: AppTheme.primaryCurve,
+      child: Card(
+        elevation: 8,
+        shadowColor: color.withOpacity(0.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: AppTheme.surfaceGradient,
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1487,6 +1557,71 @@ class _AdminPanelState extends State<AdminPanel>
     );
   }
 
+  Widget _buildEnhancedQuickActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return AnimatedContainer(
+      duration: AppTheme.fastAnimation,
+      curve: AppTheme.primaryCurve,
+      child: Card(
+        elevation: 8,
+        shadowColor: color.withOpacity(0.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: AppTheme.surfaceGradient,
+            ),
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: color, size: 36),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivityRow({
     required IconData icon,
     required String title,
@@ -1625,15 +1760,95 @@ class _AdminPanelState extends State<AdminPanel>
     );
   }
 
+  Widget _buildEnhancedStatsCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required LinearGradient gradient,
+  }) {
+    return AnimatedContainer(
+      duration: AppTheme.fastAnimation,
+      curve: AppTheme.primaryCurve,
+      child: Card(
+        elevation: 8,
+        shadowColor: color.withOpacity(0.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: gradient,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: color, size: 28),
+                  ),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDashboardTab() {
     if (_loadingDashboard) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('در حال بروزرسانی داشبورد...'),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: AppTheme.primaryShadow,
+              ),
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'در حال بروزرسانی داشبورد...',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: AppTheme.textSecondary),
+            ),
           ],
         ),
       );
@@ -1644,92 +1859,89 @@ class _AdminPanelState extends State<AdminPanel>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Welcome Section
-          Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.1),
-                    Theme.of(context).primaryColor.withOpacity(0.05),
-                  ],
-                ),
+          // Welcome Section with enhanced styling
+          AnimatedContainer(
+            duration: AppTheme.normalAnimation,
+            curve: AppTheme.primaryCurve,
+            child: Card(
+              elevation: 12,
+              shadowColor: AppTheme.primaryGold.withOpacity(0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-              padding: const EdgeInsets.all(32),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).primaryColor.withOpacity(0.2),
-                    child: Icon(
-                      Icons.admin_panel_settings,
-                      size: 40,
-                      color: Theme.of(context).primaryColor,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: AppTheme.primaryGradient,
+                ),
+                padding: const EdgeInsets.all(32),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                        boxShadow: AppTheme.cardShadow,
+                      ),
+                      child: Icon(
+                        Icons.admin_panel_settings,
+                        size: 48,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'خوش آمدید به پنل مدیریت',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.currentUser.fullName.isNotEmpty
-                              ? widget.currentUser.fullName
-                              : widget.currentUser.username,
-                          style: Theme.of(context).textTheme.headlineLarge
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[800],
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).primaryColor.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            'نقش: مدیر سیستم',
-                            style: Theme.of(context).textTheme.bodyLarge
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'خوش آمدید به پنل مدیریت',
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.currentUser.fullName.isNotEmpty
+                                ? widget.currentUser.fullName
+                                : widget.currentUser.username,
+                            style: Theme.of(context).textTheme.headlineLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(
+                                color: Colors.black.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: Text(
+                              'نقش: مدیر سیستم',
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1749,40 +1961,44 @@ class _AdminPanelState extends State<AdminPanel>
           Row(
             children: [
               Expanded(
-                child: _buildStatsCard(
+                child: _buildEnhancedStatsCard(
                   title: 'کل کاربران',
                   value: '${_users.length}',
                   icon: Icons.people,
-                  color: Colors.blue,
+                  color: AppTheme.blueAccent,
+                  gradient: AppTheme.surfaceGradient,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildStatsCard(
+                child: _buildEnhancedStatsCard(
                   title: 'کاربران آنلاین',
                   value:
                       '${_users.where((user) => _isUserOnline(user)).length}',
                   icon: Icons.wifi,
-                  color: Colors.green,
+                  color: AppTheme.greenAccent,
+                  gradient: AppTheme.surfaceGradient,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildStatsCard(
+                child: _buildEnhancedStatsCard(
                   title: 'کاربران فعال',
                   value: '${_users.where((user) => user.isActive == 1).length}',
                   icon: Icons.check_circle,
-                  color: Colors.orange,
+                  color: AppTheme.accentGold,
+                  gradient: AppTheme.surfaceGradient,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildStatsCard(
+                child: _buildEnhancedStatsCard(
                   title: 'مدیران سیستم',
                   value:
                       '${_users.where((user) => user.role == 'admin').length}',
                   icon: Icons.admin_panel_settings,
-                  color: Colors.red,
+                  color: AppTheme.redAccent,
+                  gradient: AppTheme.surfaceGradient,
                 ),
               ),
             ],
@@ -1803,21 +2019,21 @@ class _AdminPanelState extends State<AdminPanel>
           Row(
             children: [
               Expanded(
-                child: _buildQuickActionCard(
+                child: _buildEnhancedQuickActionCard(
                   title: 'افزودن کاربر جدید',
                   subtitle: 'ایجاد حساب کاربری جدید',
                   icon: Icons.person_add,
-                  color: Colors.blue,
+                  color: AppTheme.blueAccent,
                   onTap: _showCreateUserDialog,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildQuickActionCard(
+                child: _buildEnhancedQuickActionCard(
                   title: 'مدیریت کاربران',
                   subtitle: 'مشاهده و ویرایش کاربران',
                   icon: Icons.people,
-                  color: Colors.orange,
+                  color: AppTheme.accentGold,
                   onTap: () {
                     _tabController.animateTo(1);
                   },
@@ -1841,35 +2057,35 @@ class _AdminPanelState extends State<AdminPanel>
           Row(
             children: [
               Expanded(
-                child: _buildActivityDetailCard(
+                child: _buildEnhancedActivityDetailCard(
                   title: 'کاربران آنلاین',
                   value:
                       '${_users.where((user) => _isUserOnline(user)).length}',
                   subtitle: 'فعال در 10 دقیقه گذشته',
                   icon: Icons.wifi,
-                  color: Colors.green,
+                  color: AppTheme.greenAccent,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildActivityDetailCard(
+                child: _buildEnhancedActivityDetailCard(
                   title: 'کاربران اخیر',
                   value:
                       '${_users.where((user) => _isUserRecentlyActive(user)).length}',
                   subtitle: 'فعال در 1 ساعت گذشته',
                   icon: Icons.access_time,
-                  color: Colors.blue,
+                  color: AppTheme.blueAccent,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildActivityDetailCard(
+                child: _buildEnhancedActivityDetailCard(
                   title: 'کاربران آفلاین',
                   value:
                       '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
                   subtitle: 'غیرفعال بیش از 1 ساعت',
                   icon: Icons.offline_bolt,
-                  color: Colors.grey,
+                  color: AppTheme.textHint,
                 ),
               ),
             ],
@@ -1965,13 +2181,28 @@ class _AdminPanelState extends State<AdminPanel>
 
   Widget _buildUsersTab() {
     if (_loadingUsers) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('در حال بارگذاری کاربران...'),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: AppTheme.primaryShadow,
+              ),
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'در حال بارگذاری کاربران...',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: AppTheme.textSecondary),
+            ),
           ],
         ),
       );
@@ -1981,23 +2212,67 @@ class _AdminPanelState extends State<AdminPanel>
       children: [
         // Header with user count
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppTheme.darkGradient,
+            boxShadow: AppTheme.cardShadow,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'لیست کاربران (${_users.length})',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGold.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      boxShadow: AppTheme.primaryShadow,
+                    ),
+                    child: Icon(
+                      Icons.people,
+                      color: AppTheme.primaryGold,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'لیست کاربران',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                      ),
+                      Text(
+                        '${_users.length} کاربر',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               ElevatedButton.icon(
                 onPressed: _showCreateUserDialog,
                 icon: const Icon(Icons.person_add),
                 label: const Text('افزودن کاربر'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppTheme.primaryGold,
+                  foregroundColor: Colors.black,
+                  elevation: 8,
+                  shadowColor: AppTheme.primaryGold.withOpacity(0.4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ],
@@ -2009,24 +2284,35 @@ class _AdminPanelState extends State<AdminPanel>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 64,
-                        color: Colors.grey[400],
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppTheme.surfaceGradient,
+                          boxShadow: AppTheme.cardShadow,
+                        ),
+                        child: Icon(
+                          Icons.people_outline,
+                          size: 80,
+                          color: AppTheme.textHint,
+                        ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       Text(
                         'هیچ کاربری یافت نشد',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Text(
                         'اولین کاربر را با استفاده از دکمه بالا اضافه کنید',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[500],
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -2038,146 +2324,253 @@ class _AdminPanelState extends State<AdminPanel>
                     itemCount: _users.length,
                     itemBuilder: (context, index) {
                       final user = _users[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: InkWell(
-                          onTap: () => _showUserDetailsDialog(user),
-                          borderRadius: BorderRadius.circular(12),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            leading: CircleAvatar(
-                              backgroundColor: user.role == 'admin'
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.blue.withOpacity(0.1),
-                              child: Icon(
-                                user.role == 'admin'
-                                    ? Icons.admin_panel_settings
-                                    : Icons.person,
-                                color: user.role == 'admin'
-                                    ? Colors.red
-                                    : Colors.blue,
-                              ),
-                            ),
-                            title: Row(
-                              children: <Widget>[
-                                Text(
-                                  user.username,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (user.isActive == 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red[100],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'غیرفعال',
-                                      style: TextStyle(
-                                        color: Colors.red[700],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                if (user.isActive == 1)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green[100],
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'فعال',
-                                      style: TextStyle(
-                                        color: Colors.green[700],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (user.fullName.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(user.fullName),
-                                ],
-                                if (user.email.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    user.email,
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                ],
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: _isUserOnline(user)
-                                            ? Colors.green
-                                            : Colors.grey,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _isUserOnline(user)
-                                          ? 'آنلاین'
-                                          : (user.lastSeen != null
-                                                ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
-                                                : 'آفلاین'),
-                                      style: TextStyle(
-                                        color: _isUserOnline(user)
-                                            ? Colors.green[700]
-                                            : Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
+                      return AnimatedContainer(
+                        duration: AppTheme.fastAnimation,
+                        curve: AppTheme.primaryCurve,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Card(
+                          elevation: 8,
+                          shadowColor: AppTheme.primaryGold.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: InkWell(
+                            onTap: () => _showUserDetailsDialog(user),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
                               decoration: BoxDecoration(
-                                color: user.role == 'admin'
-                                    ? Colors.red[50]
-                                    : Colors.blue[50],
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: user.role == 'admin'
-                                      ? Colors.red[200]!
-                                      : Colors.blue[200]!,
-                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: AppTheme.surfaceGradient,
                               ),
-                              child: Text(
-                                user.role == 'admin' ? 'مدیر' : 'کاربر',
-                                style: TextStyle(
-                                  color: user.role == 'admin'
-                                      ? Colors.red[700]
-                                      : Colors.blue[700],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
+                              padding: const EdgeInsets.all(20),
+                              child: Row(
+                                children: [
+                                  // User Avatar
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: user.role == 'admin'
+                                          ? AppTheme.redAccent.withOpacity(0.2)
+                                          : AppTheme.blueAccent.withOpacity(
+                                              0.2,
+                                            ),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              (user.role == 'admin'
+                                                      ? AppTheme.redAccent
+                                                      : AppTheme.blueAccent)
+                                                  .withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      user.role == 'admin'
+                                          ? Icons.admin_panel_settings
+                                          : Icons.person,
+                                      color: user.role == 'admin'
+                                          ? AppTheme.redAccent
+                                          : AppTheme.blueAccent,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+
+                                  // User Info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              user.username,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textPrimary,
+                                                  ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            if (user.isActive == 0)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.redAccent
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  border: Border.all(
+                                                    color: AppTheme.redAccent
+                                                        .withOpacity(0.5),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'غیرفعال',
+                                                  style: TextStyle(
+                                                    color: AppTheme.redAccent,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            if (user.isActive == 1)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.greenAccent
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                  border: Border.all(
+                                                    color: AppTheme.greenAccent
+                                                        .withOpacity(0.5),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  'فعال',
+                                                  style: TextStyle(
+                                                    color: AppTheme.greenAccent,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        if (user.fullName.isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            user.fullName,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.copyWith(
+                                                  color: AppTheme.textSecondary,
+                                                ),
+                                          ),
+                                        ],
+                                        if (user.email.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            user.email,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: AppTheme.textHint,
+                                                ),
+                                          ),
+                                        ],
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                color: _isUserOnline(user)
+                                                    ? AppTheme.greenAccent
+                                                    : AppTheme.textHint,
+                                                shape: BoxShape.circle,
+                                                boxShadow: _isUserOnline(user)
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: AppTheme
+                                                              .greenAccent
+                                                              .withOpacity(0.5),
+                                                          blurRadius: 6,
+                                                          spreadRadius: 1,
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _isUserOnline(user)
+                                                  ? 'آنلاین'
+                                                  : (user.lastSeen != null
+                                                        ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
+                                                        : 'آفلاین'),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: _isUserOnline(user)
+                                                        ? AppTheme.greenAccent
+                                                        : AppTheme
+                                                              .textSecondary,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Role Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: user.role == 'admin'
+                                          ? AppTheme.redAccent.withOpacity(0.2)
+                                          : AppTheme.blueAccent.withOpacity(
+                                              0.2,
+                                            ),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: user.role == 'admin'
+                                            ? AppTheme.redAccent.withOpacity(
+                                                0.5,
+                                              )
+                                            : AppTheme.blueAccent.withOpacity(
+                                                0.5,
+                                              ),
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              (user.role == 'admin'
+                                                      ? AppTheme.redAccent
+                                                      : AppTheme.blueAccent)
+                                                  .withOpacity(0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      user.role == 'admin' ? 'مدیر' : 'کاربر',
+                                      style: TextStyle(
+                                        color: user.role == 'admin'
+                                            ? AppTheme.redAccent
+                                            : AppTheme.blueAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -2209,13 +2602,63 @@ class _AdminPanelState extends State<AdminPanel>
   Widget _buildPostsTab() {
     final theme = Theme.of(context);
     if (_loadingTemplates) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: AppTheme.primaryShadow,
+              ),
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'در حال بارگذاری الگوها...',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      );
     }
     if (_templateError != null) {
       return Center(
-        child: Text(
-          'خطا در دریافت الگوها: $_templateError',
-          style: const TextStyle(color: Colors.red),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppTheme.redAccent.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.redAccent.withOpacity(0.3)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, color: AppTheme.redAccent, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'خطا در دریافت الگوها',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _templateError!,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -2223,12 +2666,16 @@ class _AdminPanelState extends State<AdminPanel>
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Card(
-          color: Colors.grey[900],
-          elevation: 12,
+          elevation: 16,
+          shadowColor: AppTheme.primaryGold.withOpacity(0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: AppTheme.surfaceGradient,
+            ),
             padding: const EdgeInsets.all(32),
             child: Form(
               key: _formKey,
@@ -2238,16 +2685,28 @@ class _AdminPanelState extends State<AdminPanel>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.send, color: Colors.blue[200], size: 32),
-                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGold.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          boxShadow: AppTheme.primaryShadow,
+                        ),
+                        child: Icon(
+                          Icons.send,
+                          color: AppTheme.primaryGold,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
                       Expanded(
-                        // Added Expanded to prevent overflow
                         child: Text(
                           'ارسال پست به وردپرس',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ),
                     ],
@@ -2257,22 +2716,41 @@ class _AdminPanelState extends State<AdminPanel>
                     value: _selectedTemplateIndex,
                     decoration: InputDecoration(
                       labelText: 'انتخاب الگو',
-                      prefixIcon: const Icon(Icons.layers),
-                      filled: true,
-                      fillColor: Colors.grey[900],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                      prefixIcon: Icon(
+                        Icons.layers,
+                        color: AppTheme.primaryGold,
                       ),
+                      filled: true,
+                      fillColor: AppTheme.secondaryDark,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold,
+                          width: 2,
+                        ),
+                      ),
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
                     ),
-                    dropdownColor: Colors.grey[900],
-                    style: const TextStyle(color: Colors.white),
+                    dropdownColor: AppTheme.secondaryDark,
+                    style: TextStyle(color: AppTheme.textPrimary),
                     items: _templates.map((template) {
                       return DropdownMenuItem(
                         value: template['index'],
                         child: Text(
                           template['name'] ?? 'الگو ${template['index']}',
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: AppTheme.textPrimary),
                         ),
                       );
                     }).toList(),
@@ -2283,106 +2761,285 @@ class _AdminPanelState extends State<AdminPanel>
                     },
                   ),
                   const SizedBox(height: 20),
-                  Text(
-                    'کاور آهنگ',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGold.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppTheme.primaryGold.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.image,
+                              color: AppTheme.primaryGold,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'کاور آهنگ',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: AppTheme.primaryGold,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _uploadingCover
+                                  ? null
+                                  : _pickImageAndUpload,
+                              icon: const Icon(Icons.upload_file),
+                              label: const Text('آپلود از سیستم'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.blueAccent,
+                                foregroundColor: Colors.white,
+                                elevation: 6,
+                                shadowColor: AppTheme.blueAccent.withOpacity(
+                                  0.4,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: _urlImageController,
+                                style: TextStyle(color: AppTheme.textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: 'یا آدرس عکس را وارد کنید',
+                                  hintStyle: TextStyle(
+                                    color: AppTheme.textHint,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      Icons.cloud_upload,
+                                      color: AppTheme.blueAccent,
+                                    ),
+                                    onPressed: _uploadingCover
+                                        ? null
+                                        : () => _uploadFromUrl(
+                                            _urlImageController.text,
+                                          ),
+                                  ),
+                                  filled: true,
+                                  fillColor: AppTheme.secondaryDark,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.primaryGold.withOpacity(
+                                        0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.primaryGold.withOpacity(
+                                        0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: AppTheme.primaryGold,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _uploadingCover ? null : _pickImageAndUpload,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('آپلود از سیستم'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[800],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _urlImageController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'یا آدرس عکس را وارد کنید',
-                            hintStyle: const TextStyle(color: Colors.white54),
-                            suffixIcon: IconButton(
-                              icon: const Icon(
-                                Icons.cloud_upload,
-                                color: Colors.blue,
-                              ),
-                              onPressed: _uploadingCover
-                                  ? null
-                                  : () => _uploadFromUrl(
-                                      _urlImageController.text,
-                                    ),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[900],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
                   TextField(
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       hintText: 'نام خواننده برای جستجوی عکس',
-                      hintStyle: const TextStyle(color: Colors.white54),
+                      hintStyle: TextStyle(color: AppTheme.textHint),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: AppTheme.primaryGold,
+                      ),
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.search, color: Colors.blue),
+                        icon: Icon(Icons.search, color: AppTheme.blueAccent),
                         onPressed: () async {
                           await _searchImages(_artistController.text);
                         },
                       ),
                       filled: true,
-                      fillColor: Colors.grey[900],
+                      fillColor: AppTheme.secondaryDark,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold,
+                          width: 2,
+                        ),
                       ),
                     ),
                     onSubmitted: (value) async {
                       await _searchImages(value);
                     },
                   ),
-                  if (_searchResults.isNotEmpty)
-                    SizedBox(
-                      height: 100,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _searchResults
-                            .map(
-                              (imgUrl) => GestureDetector(
-                                onTap: () => _uploadFromUrl(imgUrl),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Image.network(
-                                    imgUrl,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                  if (_searchResults.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondaryDark.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppTheme.primaryGold.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.image_search,
+                                color: AppTheme.primaryGold,
+                                size: 20,
                               ),
-                            )
-                            .toList(),
+                              const SizedBox(width: 8),
+                              Text(
+                                'نتایج جستجو',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: AppTheme.primaryGold,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 100,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: _searchResults
+                                  .map(
+                                    (imgUrl) => GestureDetector(
+                                      onTap: () => _uploadFromUrl(imgUrl),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: AppTheme.primaryGold
+                                                .withOpacity(0.3),
+                                            width: 2,
+                                          ),
+                                          boxShadow: AppTheme.cardShadow,
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            imgUrl,
+                                            width: 80,
+                                            height: 80,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  if (_coverUrl != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Image.network(_coverUrl!, height: 120),
+                  ],
+                  if (_coverUrl != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondaryDark.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: AppTheme.greenAccent,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'کاور انتخاب شده',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: AppTheme.greenAccent,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: AppTheme.cardShadow,
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(
+                                  _coverUrl!,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
                   const SizedBox(height: 20),
                   _buildTextField(
                     controller: _artistController,
@@ -2447,57 +3104,79 @@ class _AdminPanelState extends State<AdminPanel>
                   const SizedBox(height: 24),
                   if (_error != null) ...[
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.red[900],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[700]!),
+                        color: AppTheme.redAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppTheme.redAccent.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: Colors.red[200],
-                            size: 20,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.redAccent.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.error_outline,
+                              color: AppTheme.redAccent,
+                              size: 20,
+                            ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               _error!,
-                              style: const TextStyle(
-                                color: Colors.redAccent,
+                              style: TextStyle(
+                                color: AppTheme.redAccent,
                                 fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                   ],
-                  ElevatedButton.icon(
-                    onPressed: _loading ? null : _sendPost,
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.send),
-                    label: const Text('ارسال پست'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[800],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: AppTheme.buttonShadow,
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: _loading ? null : _sendPost,
+                      icon: _loading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : Icon(Icons.send, size: 24),
+                      label: Text(
+                        _loading ? 'در حال ارسال...' : 'ارسال پست',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGold,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 20,
+                          horizontal: 32,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
                       ),
                     ),
                   ),

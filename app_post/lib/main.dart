@@ -4,6 +4,7 @@ import 'login_page.dart';
 import 'user_panel.dart';
 import 'admin_panel.dart';
 import 'session_manager.dart';
+import 'app_theme.dart';
 
 User? currentUser;
 
@@ -17,7 +18,12 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(title: 'App Post', debugShowCheckedModeBanner: false, home: AuthWrapper());
+    return MaterialApp(
+      title: 'App Post',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
+      home: AuthWrapper(),
+    );
   }
 }
 
