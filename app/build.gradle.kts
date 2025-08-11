@@ -36,25 +36,18 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.firestore.ktx)
+    
+    // Coroutines support
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-// build.gradle.kts (Module: app)
-
-        // ... سایر dependency های شما
-
-        // برای Material Design
-        implementation("com.google.android.material:material:1.12.0") // از آخرین نسخه پایدار استفاده کنید
-        // برای AppCompat (مهم برای Theme.AppCompat.NoActionBar)
-        implementation("androidx.appcompat:appcompat:1.7.0") // از آخرین نسخه پایدار استفاده کنید
-
-
-    }
+}

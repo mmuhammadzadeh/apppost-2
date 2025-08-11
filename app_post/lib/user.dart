@@ -29,7 +29,7 @@ class User {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
-      fullName: json.containsKey('full_name') ? json['full_name'] : '',
+      fullName: json['full_name'] ?? '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
       createdAt:
@@ -38,8 +38,8 @@ class User {
       token: token,
       isOnline: json['is_online'] == 1 || json['is_online'] == true,
       lastSeen: DateTime.tryParse(
-            (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
-          ),
+        (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
+      ),
     );
   }
 
@@ -58,8 +58,8 @@ class User {
       // token اینجا null می‌ماند
       isOnline: json['is_online'] == 1 || json['is_online'] == true,
       lastSeen: DateTime.tryParse(
-            (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
-          ),
+        (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
+      ),
     );
   }
 }
@@ -88,7 +88,8 @@ extension UserJson on User {
       fullName: json.containsKey('full_name') ? json['full_name'] ?? '' : '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
       token: json['token']?.toString(),
       isOnline: json['is_online'] == 1 || json['is_online'] == true,

@@ -1,15 +1,14 @@
 package com.example.apppost
 
-import android.os.AsyncTask
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
 
 class ApiService {
-
-
     private val BASE_URL = "https://gtalk.ir/app/api.php"
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     companion object {
         @Volatile
@@ -69,18 +68,30 @@ class ApiService {
         token: String? = null,
         callback: GenericApiCallback
     ) {
-        GenericTask(action, params, token, callback).execute()
+        coroutineScope.launch {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    performApiCall(action, params, token)
+                }
+                callback.onResult(response)
+            } catch (e: Exception) {
+                val errorResponse = ApiResponse(
+                    success = false,
+                    message = "Connection error: ${e.message}",
+                    data = JSONObject()
+                )
+                callback.onResult(errorResponse)
+            }
+        }
     }
 
-    // کلاس داخلی برای انجام عملیات شبکه در پس‌زمینه
-    private inner class GenericTask(
-        private val action: String,
-        private val params: Map<String, Any>,
-        private val token: String?,
-        private val callback: GenericApiCallback
-    ) : AsyncTask<Void, Void, ApiResponse>() {
-
-        override fun doInBackground(vararg voids: Void): ApiResponse {
+    // انجام درخواست API در پس‌زمینه
+    private suspend fun performApiCall(
+        action: String,
+        params: Map<String, Any>,
+        token: String?
+    ): ApiResponse {
+        return withContext(Dispatchers.IO) {
             try {
                 val url = URL(BASE_URL)
                 val connection = url.openConnection() as HttpURLConnection
@@ -122,23 +133,19 @@ class ApiService {
                 connection.disconnect()
 
                 val jsonResponse = JSONObject(response.toString())
-                return ApiResponse(
+                ApiResponse(
                     success = jsonResponse.optBoolean("success", false),
                     message = jsonResponse.optString("message", "Unknown error"),
                     data = jsonResponse
                 )
 
             } catch (e: Exception) {
-                return ApiResponse(
+                ApiResponse(
                     success = false,
                     message = "Connection error: ${e.message}",
                     data = JSONObject()
                 )
             }
-        }
-
-        override fun onPostExecute(response: ApiResponse) {
-            callback.onResult(response) // مطمئن شوید این خط دقیقاً همین است و TODO ندارد
         }
     }
 

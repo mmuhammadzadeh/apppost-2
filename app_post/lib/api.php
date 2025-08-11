@@ -330,21 +330,33 @@ switch ($action) {
       // بررسی وجود ستون‌ها برای سازگاری با اسکیمای متفاوت
       $hasCreatedAt = false;
       $hasLastActive = false;
+      
+      // ابتدا بررسی کنیم که آیا جدول users وجود دارد
       try {
-          $cols = $pdo->query("SHOW COLUMNS FROM users");
-          foreach ($cols as $c) {
-              $f = strtolower($c['Field'] ?? '');
-              if ($f === 'created_at') $hasCreatedAt = true;
-              if ($f === 'last_active') $hasLastActive = true;
+          $tableExists = $pdo->query("SELECT 1 FROM users LIMIT 1");
+          if ($tableExists) {
+              try {
+                  $cols = $pdo->query("SHOW COLUMNS FROM users");
+                  foreach ($cols as $c) {
+                      $f = strtolower($c['Field'] ?? '');
+                      if ($f === 'created_at') $hasCreatedAt = true;
+                      if ($f === 'last_active') $hasLastActive = true;
+                  }
+              } catch (Exception $e) {
+                  error_log("Failed to check columns: " . $e->getMessage());
+                  // پیش‌فرض: ستون‌ها وجود ندارند
+              }
           }
       } catch (Exception $e) {
-          // اگر نتوانستیم بخوانیم، پیش‌فرض می‌ماند
+          error_log("Table users does not exist or not accessible: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'جدول کاربران یافت نشد']);
+          exit();
       }
 
       $select = "id, username, email, full_name, role, is_active";
       $select .= $hasCreatedAt ? ", created_at" : ", NULL AS created_at";
       if ($hasLastActive) {
-          $select .= ", last_active, IF(last_active IS NOT NULL AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window, 1, 0) AS is_online";
+          $select .= ", last_active, IF(last_active IS NOT NULL AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < " . ONLINE_WINDOW_MINUTES . ", 1, 0) AS is_online";
       } else {
           $select .= ", NULL AS last_active, 0 AS is_online";
       }
@@ -353,18 +365,47 @@ switch ($action) {
         ? "ORDER BY is_online DESC, COALESCE(last_active, '1970-01-01 00:00:00') DESC"
         : "ORDER BY id DESC";
 
-      $sql = "SELECT $select FROM users $order LIMIT $limit OFFSET $offset";
       try {
+          // استفاده از کوئری کامل با محاسبه وضعیت آنلاین بودن
+          $sql = "SELECT 
+                      id, 
+                      username, 
+                      email, 
+                      full_name, 
+                      role, 
+                      is_active,
+                      last_active,
+                      CASE 
+                          WHEN last_active IS NOT NULL 
+                          AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
+                          THEN 1 
+                          ELSE 0 
+                      END AS is_online
+                  FROM users 
+                  ORDER BY 
+                      CASE 
+                          WHEN last_active IS NOT NULL 
+                          AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
+                          THEN 1 
+                          ELSE 0 
+                      END DESC,
+                      COALESCE(last_active, '1970-01-01 00:00:00') DESC
+                  LIMIT $limit OFFSET $offset";
           $stmt = $pdo->query($sql);
           $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
       } catch (Exception $e) {
-          error_log('get_users dynamic query failed: ' . $e->getMessage() . ' SQL=' . $sql);
-          echo json_encode(['success' => false, 'message' => 'خطا در اجرای کوئری کاربران']);
+          error_log('get_users query failed: ' . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطا در اجرای کوئری کاربران: ' . $e->getMessage()]);
           exit();
       }
 
-      $countStmt = $pdo->query("SELECT COUNT(*) as total FROM users");
-      $total = $countStmt->fetch()['total'];
+      try {
+          $countStmt = $pdo->query("SELECT COUNT(*) as total FROM users");
+          $total = $countStmt->fetch()['total'];
+      } catch (Exception $e) {
+          error_log("Failed to count users: " . $e->getMessage());
+          $total = 0;
+      }
 
       error_log("get_users - Returning " . count($users) . " users");
 

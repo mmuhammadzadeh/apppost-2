@@ -66,6 +66,7 @@ class _AdminPanelState extends State<AdminPanel>
 
   bool _loadingUsers = false;
   final bool _loadingPosts = false;
+  bool _loadingDashboard = false;
   int _currentTabIndex = 0;
   late final String _adminToken;
 
@@ -97,7 +98,7 @@ class _AdminPanelState extends State<AdminPanel>
   void initState() {
     super.initState();
     _adminToken = widget.currentUser.token ?? '';
-    _tabController = TabController(length: 2, vsync: this); // Changed length to 2
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabSelection);
     _loadUsers();
     _fetchTemplates();
@@ -156,6 +157,18 @@ class _AdminPanelState extends State<AdminPanel>
       setState(() => _users = []);
     } finally {
       setState(() => _loadingUsers = false);
+    }
+  }
+
+  Future<void> _refreshDashboard() async {
+    setState(() => _loadingDashboard = true);
+    try {
+      await Future.wait([_loadUsers(), _fetchTemplates()]);
+      _showSuccessSnackBar('داشبورد بروزرسانی شد');
+    } catch (e) {
+      _showErrorSnackBar('خطا در بروزرسانی داشبورد: ${e.toString()}');
+    } finally {
+      setState(() => _loadingDashboard = false);
     }
   }
 
@@ -238,11 +251,13 @@ class _AdminPanelState extends State<AdminPanel>
       setState(() => _uploadingCover = false);
     }
     */
-    
+
     // Temporary alternative: Use URL upload
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('برای آپلود عکس، لطفاً از گزینه "آپلود از URL" استفاده کنید'),
+        content: Text(
+          'برای آپلود عکس، لطفاً از گزینه "آپلود از URL" استفاده کنید',
+        ),
         backgroundColor: Colors.blue,
         duration: Duration(seconds: 3),
       ),
@@ -1021,11 +1036,13 @@ class _AdminPanelState extends State<AdminPanel>
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // Refresh only the users tab
+              // Refresh based on current tab
               if (_tabController.index == 0) {
+                // Refresh dashboard data
+                _refreshDashboard();
+              } else if (_tabController.index == 1) {
                 _loadUsers();
               }
-              _showSuccessSnackBar('اطلاعات بروزرسانی شد.');
             },
             tooltip: 'بروزرسانی',
           ),
@@ -1041,6 +1058,7 @@ class _AdminPanelState extends State<AdminPanel>
           unselectedLabelColor: Colors.grey,
           indicatorColor: theme.primaryColor,
           tabs: const [
+            Tab(icon: Icon(Icons.dashboard), text: 'داشبورد'),
             Tab(icon: Icon(Icons.people), text: 'کاربران'),
             Tab(icon: Icon(Icons.article), text: 'ارسال پست'),
           ],
@@ -1048,15 +1066,15 @@ class _AdminPanelState extends State<AdminPanel>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildUsersTab(), _buildPostsTab()],
+        children: [_buildDashboardTab(), _buildUsersTab(), _buildPostsTab()],
       ),
       floatingActionButton: _getFloatingActionButton(),
     );
   }
 
   Widget? _getFloatingActionButton() {
-    // Show FAB only on the Users tab
-    if (_currentTabIndex == 0) {
+    // Show FAB on Dashboard and Users tabs
+    if (_currentTabIndex == 0 || _currentTabIndex == 1) {
       return FloatingActionButton.extended(
         onPressed: _showCreateUserDialog,
         icon: const Icon(Icons.person_add),
@@ -1064,6 +1082,150 @@ class _AdminPanelState extends State<AdminPanel>
       );
     }
     return null;
+  }
+
+  Widget _buildQuickActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: color.withOpacity(0.1),
+                child: Icon(icon, color: color, size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String time,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: color.withOpacity(0.1),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            time,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCurrentDateTime() {
+    final now = DateTime.now();
+    final persianMonths = [
+      'فروردین',
+      'اردیبهشت',
+      'خرداد',
+      'تیر',
+      'مرداد',
+      'شهریور',
+      'مهر',
+      'آبان',
+      'آذر',
+      'دی',
+      'بهمن',
+      'اسفند',
+    ];
+
+    final month = persianMonths[now.month - 1];
+    final hour = now.hour.toString().padLeft(2, '0');
+    final minute = now.minute.toString().padLeft(2, '0');
+
+    return '${now.day} $month ${now.year} - $hour:$minute';
   }
 
   Widget _buildStatsCard({
@@ -1102,6 +1264,295 @@ class _AdminPanelState extends State<AdminPanel>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardTab() {
+    if (_loadingDashboard) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('در حال بروزرسانی داشبورد...'),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Welcome Section
+          Card(
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).primaryColor.withOpacity(0.1),
+                    Theme.of(context).primaryColor.withOpacity(0.05),
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.all(32),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).primaryColor.withOpacity(0.2),
+                    child: Icon(
+                      Icons.admin_panel_settings,
+                      size: 40,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'خوش آمدید به پنل مدیریت',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.currentUser.fullName.isNotEmpty
+                              ? widget.currentUser.fullName
+                              : widget.currentUser.username,
+                          style: Theme.of(context).textTheme.headlineLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'نقش: مدیر سیستم',
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Statistics Section
+          Text(
+            'آمار کلی سیستم',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatsCard(
+                  title: 'کل کاربران',
+                  value: '${_users.length}',
+                  icon: Icons.people,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatsCard(
+                  title: 'کاربران آنلاین',
+                  value:
+                      '${_users.where((user) => user.isOnline ?? false).length}',
+                  icon: Icons.wifi,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatsCard(
+                  title: 'کاربران فعال',
+                  value: '${_users.where((user) => user.isActive == 1).length}',
+                  icon: Icons.check_circle,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatsCard(
+                  title: 'مدیران سیستم',
+                  value:
+                      '${_users.where((user) => user.role == 'admin').length}',
+                  icon: Icons.admin_panel_settings,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 32),
+
+          // Quick Actions Section
+          Text(
+            'عملیات سریع',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'افزودن کاربر جدید',
+                  subtitle: 'ایجاد حساب کاربری جدید',
+                  icon: Icons.person_add,
+                  color: Colors.blue,
+                  onTap: _showCreateUserDialog,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildQuickActionCard(
+                  title: 'مدیریت کاربران',
+                  subtitle: 'مشاهده و ویرایش کاربران',
+                  icon: Icons.people,
+                  color: Colors.orange,
+                  onTap: () {
+                    _tabController.animateTo(1);
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 32),
+
+          // Recent Activities Section
+          Text(
+            'فعالیت‌های اخیر',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  _buildActivityRow(
+                    icon: Icons.person_add,
+                    title: 'کاربر جدید اضافه شد',
+                    subtitle: 'کاربر جدید به سیستم اضافه شد',
+                    time: '2 دقیقه پیش',
+                    color: Colors.green,
+                  ),
+                  const Divider(),
+                  _buildActivityRow(
+                    icon: Icons.send,
+                    title: 'پست جدید ارسال شد',
+                    subtitle: 'پست جدید به وردپرس ارسال شد',
+                    time: '15 دقیقه پیش',
+                    color: Colors.blue,
+                  ),
+                  const Divider(),
+                  _buildActivityRow(
+                    icon: Icons.refresh,
+                    title: 'سیستم بروزرسانی شد',
+                    subtitle: 'اطلاعات سیستم بروزرسانی شد',
+                    time: '1 ساعت پیش',
+                    color: Colors.orange,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // System Info Section
+          Text(
+            'اطلاعات سیستم',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  _buildSystemInfoRow('آخرین بروزرسانی', 'همین الان'),
+                  const Divider(),
+                  _buildSystemInfoRow('وضعیت اتصال', 'متصل'),
+                  const Divider(),
+                  _buildSystemInfoRow('تاریخ و زمان', _getCurrentDateTime()),
+                  const Divider(),
+                  _buildSystemInfoRow('نسخه سیستم', '1.0.0'),
+                  const Divider(),
+                  _buildSystemInfoRow('پشتیبانی', '24/7'),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1153,16 +1604,24 @@ class _AdminPanelState extends State<AdminPanel>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+                      Icon(
+                        Icons.people_outline,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'هیچ کاربری یافت نشد',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'اولین کاربر را با استفاده از دکمه پایین اضافه کنید',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
+                        ),
                       ),
                     ],
                   ),
@@ -1190,14 +1649,18 @@ class _AdminPanelState extends State<AdminPanel>
                               user.role == 'admin'
                                   ? Icons.admin_panel_settings
                                   : Icons.person,
-                              color: user.role == 'admin' ? Colors.red : Colors.blue,
+                              color: user.role == 'admin'
+                                  ? Colors.red
+                                  : Colors.blue,
                             ),
                           ),
                           title: Row(
                             children: <Widget>[
                               Text(
                                 user.username,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               if (user.isActive == 0)
@@ -1212,7 +1675,10 @@ class _AdminPanelState extends State<AdminPanel>
                                   ),
                                   child: Text(
                                     'غیرفعال',
-                                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                                    style: TextStyle(
+                                      color: Colors.red[700],
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               if (user.isActive == 1)
@@ -1244,7 +1710,10 @@ class _AdminPanelState extends State<AdminPanel>
                               ],
                               if (user.email.isNotEmpty) ...[
                                 const SizedBox(height: 2),
-                                Text(user.email, style: TextStyle(color: Colors.grey[600])),
+                                Text(
+                                  user.email,
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
                               ],
                               const SizedBox(height: 6),
                               Row(
@@ -1264,8 +1733,8 @@ class _AdminPanelState extends State<AdminPanel>
                                     (user.isOnline ?? false)
                                         ? 'آنلاین'
                                         : (user.lastSeen != null
-                                            ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
-                                            : 'آفلاین'),
+                                              ? 'آخرین بازدید: ${_formatDate(user.lastSeen!)}'
+                                              : 'آفلاین'),
                                     style: TextStyle(
                                       color: (user.isOnline ?? false)
                                           ? Colors.green[700]
