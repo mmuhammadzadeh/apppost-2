@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'api_service.dart';
 import 'user.dart';
+import 'app_theme.dart';
 
 class UserPanel extends StatefulWidget {
   final User currentUser;
