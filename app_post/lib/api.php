@@ -47,7 +47,7 @@ $db_password = '235689omidARYAN@#741';
 
 define('JWT_SECRET_KEY', 'b0pW2yD8zK3xV6tL4jG1cR9sF7hA5eN0qU4mC7vB9dE2fX8gI1oP3zY5lJ6kM9nT8sQ7w');
 // بازه زمانی آنلاین بودن بر اساس آخرین فعالیت (دقیقه)
-define('ONLINE_WINDOW_MINUTES', 10);
+define('ONLINE_WINDOW_MINUTES', 5);
 
 // Debug: چاپ تاریخ سرور
 error_log("Server current time: " . time() . " (" . date('Y-m-d H:i:s') . ")");
@@ -512,6 +512,118 @@ switch ($action) {
       }
       break;
 
+  case 'update_user':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload) {
+          echo json_encode(['success' => false, 'message' => 'احراز هویت نشده']);
+          exit();
+      }
+
+      if ($payload['role'] !== 'admin') {
+          echo json_encode(['success' => false, 'message' => 'دسترسی غیرمجاز - فقط ادمین اجازه دارد']);
+          exit();
+      }
+
+      $user_id = intval($input['user_id'] ?? 0);
+      $username = trim($input['username'] ?? '');
+      $email = trim($input['email'] ?? '');
+      $full_name = trim($input['full_name'] ?? '');
+      $role = trim($input['role'] ?? 'user');
+      $is_active = intval($input['is_active'] ?? 1);
+      $password = trim($input['password'] ?? '');
+
+      if ($user_id === 0 || $username === '') {
+          echo json_encode(['success' => false, 'message' => 'شناسه کاربر و نام کاربری الزامی است.']);
+          exit();
+      }
+
+      // Debug: چاپ اطلاعات دریافتی
+      error_log("update_user - Received data: " . json_encode([
+          'user_id' => $user_id,
+          'username' => $username,
+          'email' => $email,
+          'full_name' => $full_name,
+          'role' => $role,
+          'is_active' => $is_active,
+          'has_password' => !empty($password)
+      ]));
+
+      try {
+          // بررسی وجود کاربر
+          $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+          $stmt->execute([$user_id]);
+          if (!$stmt->fetch()) {
+              echo json_encode(['success' => false, 'message' => 'کاربر یافت نشد.']);
+              exit();
+          }
+
+          // بررسی تکراری نبودن نام کاربری و ایمیل
+          $stmt = $pdo->prepare("SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?");
+          $stmt->execute([$username, $email, $user_id]);
+          if ($stmt->fetch()) {
+              echo json_encode(['success' => false, 'message' => 'این نام کاربری یا ایمیل قبلاً توسط کاربر دیگری استفاده شده است.']);
+              exit();
+          }
+
+          // ساخت کوئری UPDATE
+          $updateFields = [];
+          $params = [];
+
+          $updateFields[] = "username = ?";
+          $params[] = $username;
+
+          $updateFields[] = "email = ?";
+          $params[] = $email;
+
+          $updateFields[] = "full_name = ?";
+          $params[] = $full_name;
+
+          $updateFields[] = "role = ?";
+          $params[] = $role;
+
+          $updateFields[] = "is_active = ?";
+          $params[] = $is_active;
+
+          // اگر رمز عبور ارائه شده باشد، آن را نیز اضافه کن
+          if (!empty($password)) {
+              $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+              if ($passwordHash === false) {
+                  error_log("update_user: password_hash() failed for user $username.");
+                  echo json_encode(['success' => false, 'message' => 'خطای سیستمی در پردازش رمز عبور.']);
+                  exit();
+              }
+              $updateFields[] = "password = ?";
+              $params[] = $passwordHash;
+              error_log("update_user - Password will be updated for user $username");
+          } else {
+              error_log("update_user - No password provided, keeping existing password");
+          }
+
+          // اضافه کردن شناسه کاربر به پارامترها
+          $params[] = $user_id;
+
+          $sql = "UPDATE users SET " . implode(", ", $updateFields) . " WHERE id = ?";
+          error_log("update_user - SQL: " . $sql);
+          error_log("update_user - Params: " . json_encode($params));
+
+          $stmt = $pdo->prepare($sql);
+          if ($stmt->execute($params)) {
+              echo json_encode(['success' => true, 'message' => 'کاربر با موفقیت ویرایش شد.']);
+          } else {
+              error_log("update_user: stmt->execute() returned false for user $username.");
+              echo json_encode(['success' => false, 'message' => 'خطا در ویرایش کاربر.']);
+          }
+      } catch (PDOException $e) {
+          error_log("update_user: A database error occurred for user $username: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس هنگام ویرایش کاربر.']);
+      }
+      break;
+
   case 'create_user':
       if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
           echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
@@ -571,6 +683,60 @@ switch ($action) {
       } catch (PDOException $e) {
           error_log("create_user: A database error occurred for user $username: " . $e->getMessage());
           echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس هنگام ساخت کاربر.']);
+      }
+      break;
+
+  case 'delete_user':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload) {
+          echo json_encode(['success' => false, 'message' => 'احراز هویت نشده']);
+          exit();
+      }
+
+      if ($payload['role'] !== 'admin') {
+          echo json_encode(['success' => false, 'message' => 'دسترسی غیرمجاز - فقط ادمین اجازه دارد']);
+          exit();
+      }
+
+      $user_id = intval($input['user_id'] ?? 0);
+
+      if ($user_id === 0) {
+          echo json_encode(['success' => false, 'message' => 'شناسه کاربر الزامی است.']);
+          exit();
+      }
+
+      // جلوگیری از حذف خود ادمین
+      if ($user_id == $payload['user_id']) {
+          echo json_encode(['success' => false, 'message' => 'نمی‌توانید حساب کاربری خود را حذف کنید.']);
+          exit();
+      }
+
+      try {
+          // بررسی وجود کاربر
+          $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+          $stmt->execute([$user_id]);
+          $user = $stmt->fetch();
+          
+          if (!$user) {
+              echo json_encode(['success' => false, 'message' => 'کاربر یافت نشد.']);
+              exit();
+          }
+
+          // حذف کاربر
+          $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+          if ($stmt->execute([$user_id])) {
+              echo json_encode(['success' => true, 'message' => 'کاربر با موفقیت حذف شد.']);
+          } else {
+              echo json_encode(['success' => false, 'message' => 'خطا در حذف کاربر.']);
+          }
+      } catch (PDOException $e) {
+          error_log("delete_user: A database error occurred: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس هنگام حذف کاربر.']);
       }
       break;
 

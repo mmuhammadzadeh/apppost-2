@@ -9,6 +9,7 @@ class User {
   final String? token; // این فیلد Nullable است
   final bool? isOnline;
   final DateTime? lastSeen;
+  final String? password; // فیلد رمز عبور برای ویرایش
 
   User({
     required this.id,
@@ -21,6 +22,7 @@ class User {
     this.token, // این فیلد اختیاری است
     this.isOnline,
     this.lastSeen,
+    this.password, // فیلد رمز عبور اختیاری است
   });
 
   // سازنده برای زمانی که کاربر لاگین می‌شود و توکن دارد
@@ -40,6 +42,7 @@ class User {
       lastSeen: DateTime.tryParse(
         (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
       ),
+      password: json['password'], // اضافه کردن رمز عبور
     );
   }
 
@@ -60,6 +63,7 @@ class User {
       lastSeen: DateTime.tryParse(
         (json['last_seen'] ?? json['last_active'])?.toString() ?? '',
       ),
+      password: json['password'], // اضافه کردن رمز عبور
     );
   }
 }
@@ -77,6 +81,7 @@ extension UserJson on User {
       'token': token,
       'is_online': (isOnline ?? false) ? 1 : 0,
       'last_seen': lastSeen?.toIso8601String(),
+      'password': password, // اضافه کردن رمز عبور
     };
   }
 
@@ -94,6 +99,7 @@ extension UserJson on User {
       token: json['token']?.toString(),
       isOnline: json['is_online'] == 1 || json['is_online'] == true,
       lastSeen: DateTime.tryParse(json['last_seen']?.toString() ?? ''),
+      password: json['password'], // اضافه کردن رمز عبور
     );
   }
 }

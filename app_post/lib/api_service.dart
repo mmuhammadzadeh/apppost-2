@@ -154,22 +154,35 @@ class ApiService {
     required String fullName,
     required String role,
     required int isActive,
+    String? password, // اضافه کردن فیلد رمز عبور اختیاری
   }) async {
+    final Map<String, dynamic> requestBody = {
+      'action': 'update_user',
+      'user_id': userId,
+      'username': username,
+      'email': email,
+      'full_name': fullName,
+      'role': role,
+      'is_active': isActive,
+    };
+
+    // اضافه کردن رمز عبور به درخواست فقط اگر ارائه شده باشد
+    if (password != null && password.isNotEmpty) {
+      requestBody['password'] = password;
+      print('Password will be updated: ${password.length} characters');
+    } else {
+      print('No password provided for update');
+    }
+
+    print('Update user request body: ${jsonEncode(requestBody)}');
+
     final response = await http.post(
       Uri.parse(baseUrl),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $adminToken',
       },
-      body: jsonEncode({
-        'action': 'update_user',
-        'user_id': userId,
-        'username': username,
-        'email': email,
-        'full_name': fullName,
-        'role': role,
-        'is_active': isActive,
-      }),
+      body: jsonEncode(requestBody),
     );
 
     // بررسی پاسخ سرور
@@ -178,6 +191,7 @@ class ApiService {
     }
 
     final data = jsonDecode(response.body);
+    print('Update user response: ${jsonEncode(data)}');
 
     // بررسی موفقیت‌آمیز بودن ویرایش کاربر
     if (data['success'] == true) {

@@ -156,7 +156,7 @@ class _AdminPanelState extends State<AdminPanel>
     super.dispose();
   }
 
-  // بررسی آنلاین بودن کاربر بر اساس آخرین فعالیت (10 دقیقه)
+  // بررسی آنلاین بودن کاربر بر اساس آخرین فعالیت (5 دقیقه)
   bool _isUserOnline(User user) {
     if (user.lastSeen == null) return false;
 
@@ -164,14 +164,30 @@ class _AdminPanelState extends State<AdminPanel>
     final lastSeen = user.lastSeen!;
     final difference = now.difference(lastSeen);
 
-    // کاربر آنلاین است اگر در 10 دقیقه گذشته فعالیت داشته باشد
-    return difference.inMinutes <= 10;
+    // کاربر آنلاین است اگر در 5 دقیقه گذشته فعالیت داشته باشد
+    return difference.inMinutes <= 5;
   }
 
   // بروزرسانی آخرین فعالیت کاربر فعلی
   void _updateCurrentUserActivity() {
     // این متد می‌تواند برای بروزرسانی lastSeen کاربر فعلی استفاده شود
     // در حال حاضر از heartbeat استفاده می‌کنیم
+  }
+
+  // متد امن برای بروزرسانی لیست کاربران
+  void _safeLoadUsers() {
+    if (mounted) {
+      _loadUsers();
+    }
+  }
+
+  // متد امن برای بروزرسانی لیست کاربران با تاخیر
+  void _safeLoadUsersWithDelay() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _loadUsers();
+      }
+    });
   }
 
   // بررسی فعالیت اخیر کاربر (1 ساعت گذشته)
@@ -195,43 +211,68 @@ class _AdminPanelState extends State<AdminPanel>
     required Color color,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: color.withOpacity(0.1),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
+      elevation: 6,
+      shadowColor: color.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, color.withOpacity(0.05)],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color.withOpacity(0.1), color.withOpacity(0.2)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 28),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: color.withOpacity(0.8),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: color.withOpacity(0.6)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -482,10 +523,12 @@ class _AdminPanelState extends State<AdminPanel>
     final usernameController = TextEditingController(text: user.username);
     final emailController = TextEditingController(text: user.email);
     final fullNameController = TextEditingController(text: user.fullName);
+    final passwordController = TextEditingController(); // کنترلر برای رمز عبور
     String selectedRole = user.role;
     int selectedStatus = user.isActive;
     String? error;
     bool loading = false;
+    bool isDialogOpen = true; // متغیر برای بررسی باز بودن دیالوگ
 
     showDialog(
       context: context,
@@ -543,6 +586,31 @@ class _AdminPanelState extends State<AdminPanel>
                         controller: fullNameController,
                         label: 'نام کامل',
                         icon: Icons.badge,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: passwordController,
+                        label: 'رمز عبور جدید (اختیاری)',
+                        icon: Icons.lock,
+                        obscureText: true,
+                        validator: (value) {
+                          if (value != null &&
+                              value.isNotEmpty &&
+                              value.length < 6) {
+                            return 'رمز عبور باید حداقل ۶ کاراکتر باشد';
+                          }
+                          return null;
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12, left: 12),
+                        child: Text(
+                          'برای تغییر رمز عبور، فیلد بالا را پر کنید. در غیر این صورت رمز عبور فعلی حفظ می‌شود.',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
@@ -657,17 +725,28 @@ class _AdminPanelState extends State<AdminPanel>
                             fullName: fullNameController.text.trim(),
                             role: selectedRole,
                             isActive: selectedStatus,
+                            password: passwordController.text.trim().isNotEmpty
+                                ? passwordController.text.trim()
+                                : null,
                           );
 
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar('کاربر با موفقیت ویرایش شد');
-                          await _loadUsers();
+                          if (isDialogOpen) {
+                            isDialogOpen = false;
+                            Navigator.pop(context);
+                            _showSuccessSnackBar('کاربر با موفقیت ویرایش شد');
+                            // فراخوانی امن _loadUsers() بعد از بسته شدن دیالوگ
+                            _safeLoadUsersWithDelay();
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
-                          setState(() => error = e.toString());
+                          if (isDialogOpen) {
+                            setState(() => error = e.toString());
+                          }
                         } finally {
-                          setState(() => loading = false);
+                          if (isDialogOpen) {
+                            setState(() => loading = false);
+                          }
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -725,14 +804,22 @@ class _AdminPanelState extends State<AdminPanel>
                             );
 
                             HapticFeedback.mediumImpact();
-                            if (mounted) Navigator.pop(context);
-                            _showSuccessSnackBar('کاربر با موفقیت حذف شد');
-                            await _loadUsers();
+                            if (isDialogOpen) {
+                              isDialogOpen = false;
+                              Navigator.pop(context);
+                              _showSuccessSnackBar('کاربر با موفقیت حذف شد');
+                              // فراخوانی امن _loadUsers() بعد از بسته شدن دیالوگ
+                              _safeLoadUsersWithDelay();
+                            }
                           } catch (e) {
                             HapticFeedback.heavyImpact();
-                            setState(() => error = e.toString());
+                            if (isDialogOpen) {
+                              setState(() => error = e.toString());
+                            }
                           } finally {
-                            setState(() => loading = false);
+                            if (isDialogOpen) {
+                              setState(() => loading = false);
+                            }
                           }
                         }
                       },
@@ -766,6 +853,7 @@ class _AdminPanelState extends State<AdminPanel>
     String selectedRole = 'user';
     String? error;
     bool loading = false;
+    bool isDialogOpen = true; // متغیر برای بررسی باز بودن دیالوگ
 
     showDialog(
       context: context,
@@ -930,14 +1018,22 @@ class _AdminPanelState extends State<AdminPanel>
                           );
 
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar('کاربر با موفقیت ایجاد شد');
-                          await _loadUsers();
+                          if (isDialogOpen) {
+                            isDialogOpen = false;
+                            Navigator.pop(context);
+                            _showSuccessSnackBar('کاربر با موفقیت ایجاد شد');
+                            // فراخوانی امن _loadUsers() بعد از بسته شدن دیالوگ
+                            _safeLoadUsersWithDelay();
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
-                          setState(() => error = e.toString());
+                          if (isDialogOpen) {
+                            setState(() => error = e.toString());
+                          }
                         } finally {
-                          setState(() => loading = false);
+                          if (context.mounted) {
+                            setState(() => loading = false);
+                          }
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -1009,6 +1105,7 @@ class _AdminPanelState extends State<AdminPanel>
 
     String? error;
     bool loading = false;
+    bool isDialogOpen = true; // متغیر برای بررسی باز بودن دیالوگ
 
     showDialog(
       context: context,
@@ -1248,15 +1345,22 @@ class _AdminPanelState extends State<AdminPanel>
                             author: authorId,
                           );
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar(
-                            'پست با موفقیت به وردپرس ارسال شد',
-                          );
+                          if (isDialogOpen) {
+                            isDialogOpen = false;
+                            Navigator.pop(context);
+                            _showSuccessSnackBar(
+                              'پست با موفقیت به وردپرس ارسال شد',
+                            );
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
-                          setState(() => error = e.toString());
+                          if (isDialogOpen) {
+                            setState(() => error = e.toString());
+                          }
                         } finally {
-                          setState(() => loading = false);
+                          if (isDialogOpen) {
+                            setState(() => loading = false);
+                          }
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -1364,19 +1468,18 @@ class _AdminPanelState extends State<AdminPanel>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
+      // AppBar مستقیم در Scaffold
       appBar: AppBar(
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: theme.primaryColor.withAlpha(
-                (0.1 * 255).toInt(),
-              ),
+              backgroundColor: Theme.of(
+                context,
+              ).primaryColor.withAlpha((0.1 * 255).toInt()),
               child: Icon(
                 Icons.admin_panel_settings,
-                color: theme.primaryColor,
+                color: Theme.of(context).primaryColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -1385,30 +1488,28 @@ class _AdminPanelState extends State<AdminPanel>
               children: [
                 Text(
                   'پنل مدیریت',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   widget.currentUser.username,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                 ),
               ],
             ),
           ],
         ),
         elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: theme.primaryColor,
+        backgroundColor: Colors.white.withOpacity(0.9),
+        foregroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // Refresh based on current tab
               if (_tabController.index == 0) {
-                // Refresh dashboard data
                 _refreshDashboard();
               } else if (_tabController.index == 1) {
                 _loadUsers();
@@ -1424,9 +1525,10 @@ class _AdminPanelState extends State<AdminPanel>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: theme.primaryColor,
+          labelColor: Theme.of(context).primaryColor,
           unselectedLabelColor: Colors.grey,
-          indicatorColor: theme.primaryColor,
+          indicatorColor: Theme.of(context).primaryColor,
+          indicatorWeight: 3,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard), text: 'داشبورد'),
             Tab(icon: Icon(Icons.people), text: 'کاربران'),
@@ -1434,9 +1536,20 @@ class _AdminPanelState extends State<AdminPanel>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildDashboardTab(), _buildUsersTab(), _buildPostsTab()],
+
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF8F9FF), Color(0xFFE8EAF6), Color(0xFFF3E5F5)],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [_buildDashboardTab(), _buildUsersTab(), _buildPostsTab()],
+        ),
       ),
     );
   }
@@ -1449,38 +1562,63 @@ class _AdminPanelState extends State<AdminPanel>
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: color.withOpacity(0.1),
-                child: Icon(icon, color: color, size: 32),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
+      elevation: 8,
+      shadowColor: color.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, color.withOpacity(0.05)],
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [color.withOpacity(0.1), color.withOpacity(0.2)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: color, size: 32),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1592,34 +1730,53 @@ class _AdminPanelState extends State<AdminPanel>
     required Color color,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 32),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
+      elevation: 6,
+      shadowColor: color.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, color.withOpacity(0.05)],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withOpacity(0.1),
+                    ),
+                    child: Icon(icon, color: color, size: 28),
                   ),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: color.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1657,8 +1814,9 @@ class _AdminPanelState extends State<AdminPanel>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.1),
-                    Theme.of(context).primaryColor.withOpacity(0.05),
+                    const Color(0xFF6750A4).withOpacity(0.15),
+                    const Color(0xFF9C27B0).withOpacity(0.1),
+                    const Color(0xFFE91E63).withOpacity(0.05),
                   ],
                 ),
               ),
@@ -1686,7 +1844,7 @@ class _AdminPanelState extends State<AdminPanel>
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
+                                color: const Color(0xFF6750A4),
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -1741,7 +1899,7 @@ class _AdminPanelState extends State<AdminPanel>
             'آمار کلی سیستم',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 16),
@@ -1753,7 +1911,7 @@ class _AdminPanelState extends State<AdminPanel>
                   title: 'کل کاربران',
                   value: '${_users.length}',
                   icon: Icons.people,
-                  color: Colors.blue,
+                  color: const Color(0xFF6750A4), // بنفش
                 ),
               ),
               const SizedBox(width: 16),
@@ -1763,7 +1921,7 @@ class _AdminPanelState extends State<AdminPanel>
                   value:
                       '${_users.where((user) => _isUserOnline(user)).length}',
                   icon: Icons.wifi,
-                  color: Colors.green,
+                  color: const Color(0xFF4CAF50), // سبز
                 ),
               ),
               const SizedBox(width: 16),
@@ -1772,7 +1930,7 @@ class _AdminPanelState extends State<AdminPanel>
                   title: 'کاربران فعال',
                   value: '${_users.where((user) => user.isActive == 1).length}',
                   icon: Icons.check_circle,
-                  color: Colors.orange,
+                  color: const Color(0xFFFF9800), // نارنجی
                 ),
               ),
               const SizedBox(width: 16),
@@ -1782,7 +1940,7 @@ class _AdminPanelState extends State<AdminPanel>
                   value:
                       '${_users.where((user) => user.role == 'admin').length}',
                   icon: Icons.admin_panel_settings,
-                  color: Colors.red,
+                  color: const Color(0xFFE91E63), // صورتی
                 ),
               ),
             ],
@@ -1795,7 +1953,7 @@ class _AdminPanelState extends State<AdminPanel>
             'عملیات سریع',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: const Color(0xFF6750A4),
             ),
           ),
           const SizedBox(height: 16),
@@ -1807,7 +1965,7 @@ class _AdminPanelState extends State<AdminPanel>
                   title: 'افزودن کاربر جدید',
                   subtitle: 'ایجاد حساب کاربری جدید',
                   icon: Icons.person_add,
-                  color: Colors.blue,
+                  color: const Color(0xFF2196F3), // آبی
                   onTap: _showCreateUserDialog,
                 ),
               ),
@@ -1817,7 +1975,7 @@ class _AdminPanelState extends State<AdminPanel>
                   title: 'مدیریت کاربران',
                   subtitle: 'مشاهده و ویرایش کاربران',
                   icon: Icons.people,
-                  color: Colors.orange,
+                  color: const Color(0xFF9C27B0), // بنفش تیره
                   onTap: () {
                     _tabController.animateTo(1);
                   },
@@ -1833,7 +1991,7 @@ class _AdminPanelState extends State<AdminPanel>
             'جزئیات فعالیت کاربران',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: const Color(0xFF6750A4),
             ),
           ),
           const SizedBox(height: 16),
@@ -1845,9 +2003,9 @@ class _AdminPanelState extends State<AdminPanel>
                   title: 'کاربران آنلاین',
                   value:
                       '${_users.where((user) => _isUserOnline(user)).length}',
-                  subtitle: 'فعال در 10 دقیقه گذشته',
+                  subtitle: 'فعال در 5 دقیقه گذشته',
                   icon: Icons.wifi,
-                  color: Colors.green,
+                  color: const Color(0xFF4CAF50), // سبز
                 ),
               ),
               const SizedBox(width: 16),
@@ -1858,7 +2016,7 @@ class _AdminPanelState extends State<AdminPanel>
                       '${_users.where((user) => _isUserRecentlyActive(user)).length}',
                   subtitle: 'فعال در 1 ساعت گذشته',
                   icon: Icons.access_time,
-                  color: Colors.blue,
+                  color: const Color(0xFF2196F3), // آبی
                 ),
               ),
               const SizedBox(width: 16),
@@ -1869,7 +2027,7 @@ class _AdminPanelState extends State<AdminPanel>
                       '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
                   subtitle: 'غیرفعال بیش از 1 ساعت',
                   icon: Icons.offline_bolt,
-                  color: Colors.grey,
+                  color: const Color(0xFF607D8B), // خاکستری آبی
                 ),
               ),
             ],
@@ -1882,7 +2040,7 @@ class _AdminPanelState extends State<AdminPanel>
             'فعالیت‌های اخیر',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: const Color(0xFF6750A4),
             ),
           ),
           const SizedBox(height: 16),
@@ -1901,7 +2059,7 @@ class _AdminPanelState extends State<AdminPanel>
                     title: 'کاربر جدید اضافه شد',
                     subtitle: 'کاربر جدید به سیستم اضافه شد',
                     time: '2 دقیقه پیش',
-                    color: Colors.green,
+                    color: const Color(0xFF4CAF50), // سبز
                   ),
                   const Divider(),
                   _buildActivityRow(
@@ -1909,7 +2067,7 @@ class _AdminPanelState extends State<AdminPanel>
                     title: 'پست جدید ارسال شد',
                     subtitle: 'پست جدید به وردپرس ارسال شد',
                     time: '15 دقیقه پیش',
-                    color: Colors.blue,
+                    color: const Color(0xFF2196F3), // آبی
                   ),
                   const Divider(),
                   _buildActivityRow(
@@ -1917,7 +2075,7 @@ class _AdminPanelState extends State<AdminPanel>
                     title: 'سیستم بروزرسانی شد',
                     subtitle: 'اطلاعات سیستم بروزرسانی شد',
                     time: '1 ساعت پیش',
-                    color: Colors.orange,
+                    color: const Color(0xFFFF9800), // نارنجی
                   ),
                 ],
               ),
@@ -1931,7 +2089,7 @@ class _AdminPanelState extends State<AdminPanel>
             'اطلاعات سیستم',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: const Color(0xFF6750A4),
             ),
           ),
           const SizedBox(height: 16),
