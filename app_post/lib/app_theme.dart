@@ -1,52 +1,54 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Dark theme colors
-  static const Color primaryDark = Color(0xFF1A1A1A);
-  static const Color secondaryDark = Color(0xFF2D2D2D);
-  static const Color surfaceDark = Color(0xFF1E1E1E);
-  static const Color backgroundDark = Color(0xFF0F0F0F);
-
-  // Golden yellow colors
-  static const Color primaryGold = Color(0xFFFFD700);
-  static const Color secondaryGold = Color(0xFFFFA500);
-  static const Color accentGold = Color(0xFFFF8C00);
-  static const Color lightGold = Color(0xFFFFF8DC);
+  // Light theme colors - White and Blue
+  static const Color primaryBlue = Color(0xFF1976D2);
+  static const Color secondaryBlue = Color(0xFF42A5F5);
+  static const Color lightBlue = Color(0xFFE3F2FD);
+  static const Color surfaceWhite = Color(0xFFFFFFFF);
+  static const Color backgroundWhite = Color(0xFFF5F5F5);
+  static const Color cardWhite = Color(0xFFFFFFFF);
 
   // Accent colors
-  static const Color blueAccent = Color(0xFF4FC3F7);
+  static const Color primaryGold = Color(0xFF1976D2); // Changed to blue
+  static const Color secondaryGold = Color(0xFF42A5F5); // Changed to light blue
+  static const Color accentGold = Color(0xFF2196F3); // Changed to blue
+  static const Color lightGold = Color(0xFFE3F2FD); // Changed to light blue
+
+  // Accent colors
+  static const Color blueAccent = Color(0xFF1976D2);
   static const Color greenAccent = Color(0xFF4CAF50);
   static const Color redAccent = Color(0xFFF44336);
   static const Color purpleAccent = Color(0xFF9C27B0);
 
-  // Text colors
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textHint = Color(0xFF666666);
+  // Text colors - Dark for light theme
+  static const Color textPrimary = Color(0xFF212121);
+  static const Color textSecondary = Color(0xFF757575);
+  static const Color textHint = Color(0xFFBDBDBD);
 
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
 
       // Color scheme
-      colorScheme: const ColorScheme.dark(
+      colorScheme: const ColorScheme.light(
         primary: primaryGold,
         secondary: secondaryGold,
-        surface: surfaceDark,
-        background: backgroundDark,
-        onPrimary: Color(0xFF000000),
-        onSecondary: Color(0xFF000000),
+        surface: surfaceWhite,
+        background: backgroundWhite,
+        onPrimary: Color(0xFFFFFFFF),
+        onSecondary: Color(0xFFFFFFFF),
         onSurface: textPrimary,
         onBackground: textPrimary,
       ),
 
       // Scaffold
-      scaffoldBackgroundColor: backgroundDark,
+      scaffoldBackgroundColor: backgroundWhite,
 
       // App bar theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: primaryDark,
+        backgroundColor: surfaceWhite,
         foregroundColor: primaryGold,
         elevation: 0,
         centerTitle: true,
@@ -60,7 +62,7 @@ class AppTheme {
 
       // Card theme
       cardTheme: CardThemeData(
-        color: surfaceDark,
+        color: cardWhite,
         elevation: 8,
         shadowColor: primaryGold.withOpacity(0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -93,7 +95,7 @@ class AppTheme {
       // Input decoration theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: secondaryDark,
+        fillColor: lightBlue,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -192,7 +194,7 @@ class AppTheme {
 
       // Snackbar theme
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: surfaceDark,
+        backgroundColor: surfaceWhite,
         contentTextStyle: const TextStyle(color: textPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         behavior: SnackBarBehavior.floating,
@@ -200,7 +202,7 @@ class AppTheme {
 
       // Dialog theme
       dialogTheme: DialogThemeData(
-        backgroundColor: surfaceDark,
+        backgroundColor: surfaceWhite,
         elevation: 16,
         shadowColor: primaryGold.withOpacity(0.3),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -214,8 +216,8 @@ class AppTheme {
 
       // Bottom sheet theme
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: surfaceDark,
-        modalBackgroundColor: surfaceDark,
+        backgroundColor: surfaceWhite,
+        modalBackgroundColor: surfaceWhite,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -224,7 +226,7 @@ class AppTheme {
       // Floating action button theme
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: primaryGold,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.white,
         elevation: 8,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -233,7 +235,7 @@ class AppTheme {
 
       // Chip theme
       chipTheme: ChipThemeData(
-        backgroundColor: secondaryDark,
+        backgroundColor: lightBlue,
         selectedColor: primaryGold,
         disabledColor: textHint,
         labelStyle: const TextStyle(color: textPrimary),
@@ -307,13 +309,13 @@ class AppTheme {
   static const LinearGradient darkGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primaryDark, secondaryDark],
+    colors: [primaryBlue, secondaryBlue],
   );
 
   static const LinearGradient surfaceGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [surfaceDark, secondaryDark],
+    colors: [surfaceWhite, lightBlue],
   );
 
   // Custom shadows

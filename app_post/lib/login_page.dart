@@ -114,7 +114,14 @@ class _LoginPageState extends State<LoginPage>
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(gradient: AppTheme.darkGradient),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE3F2FD), Color(0xFFF5F5F5), Color(0xFFFFFFFF)],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -227,7 +234,7 @@ class _LoginPageState extends State<LoginPage>
         labelText: 'نام کاربری',
         prefixIcon: Icon(Icons.person_outline, color: AppTheme.primaryGold),
         filled: true,
-        fillColor: AppTheme.secondaryDark,
+        fillColor: AppTheme.lightBlue,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
@@ -280,7 +287,7 @@ class _LoginPageState extends State<LoginPage>
           },
         ),
         filled: true,
-        fillColor: AppTheme.secondaryDark,
+        fillColor: AppTheme.lightBlue,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3)),
@@ -390,19 +397,7 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildForgotPasswordLink(ThemeData theme) {
     return TextButton(
-      onPressed: () {
-        // اینجا می‌تونید صفحه فراموشی رمز عبور رو اضافه کنید
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('این قابلیت به زودی اضافه خواهد شد'),
-            backgroundColor: AppTheme.surfaceDark,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      },
+      onPressed: _showForgotPasswordDialog,
       child: Text(
         'رمز عبور خود را فراموش کرده‌اید؟',
         style: TextStyle(
@@ -411,6 +406,444 @@ class _LoginPageState extends State<LoginPage>
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.surfaceWhite,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.lock_reset, color: AppTheme.primaryGold, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'فراموشی رمز عبور',
+                    style: TextStyle(
+                      color: AppTheme.primaryGold,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'لطفاً نام کاربری خود را وارد کنید تا درخواست تغییر رمز عبور برای مدیر ارسال شود.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: emailController,
+                    textDirection: TextDirection.rtl,
+                    decoration: InputDecoration(
+                      labelText: 'نام کاربری',
+                      prefixIcon: Icon(
+                        Icons.person_outline,
+                        color: AppTheme.primaryGold,
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold,
+                          width: 2,
+                        ),
+                      ),
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'لطفاً نام کاربری را وارد کنید';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: Text(
+                    'انصراف',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (emailController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('لطفاً نام کاربری را وارد کنید'),
+                                backgroundColor: AppTheme.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => isLoading = true);
+
+                          try {
+                            // بررسی وجود کاربر
+                            final userExists = await ApiService.checkUserExists(
+                              emailController.text.trim(),
+                            );
+
+                            Navigator.of(context).pop();
+
+                            if (userExists) {
+                              // نمایش پنجره تغییر رمز عبور
+                              _showChangePasswordDialog(
+                                emailController.text.trim(),
+                              );
+                            } else {
+                              // نمایش پیام عدم وجود کاربر
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'کاربری با این نام کاربری یافت نشد',
+                                  ),
+                                  backgroundColor: AppTheme.redAccent,
+                                  duration: Duration(seconds: 3),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'خطا در بررسی کاربر: ${e.toString()}',
+                                ),
+                                backgroundColor: AppTheme.redAccent,
+                              ),
+                            );
+                          } finally {
+                            setState(() => isLoading = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black,
+                            ),
+                          ),
+                        )
+                      : Text('ارسال درخواست'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog(String username) {
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isLoading = false;
+    bool obscurePassword = true;
+    bool obscureConfirmPassword = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.surfaceWhite,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.lock, color: AppTheme.primaryGold, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'تغییر رمز عبور',
+                    style: TextStyle(
+                      color: AppTheme.primaryGold,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'کاربر "$username" یافت شد. لطفاً رمز عبور جدید خود را وارد کنید.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: newPasswordController,
+                    textDirection: TextDirection.rtl,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'رمز عبور جدید',
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: AppTheme.primaryGold,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: AppTheme.primaryGold,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold,
+                          width: 2,
+                        ),
+                      ),
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'لطفاً رمز عبور جدید را وارد کنید';
+                      }
+                      if (value.length < 6) {
+                        return 'رمز عبور باید حداقل 6 کاراکتر باشد';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    textDirection: TextDirection.rtl,
+                    obscureText: obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      labelText: 'تأیید رمز عبور جدید',
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: AppTheme.primaryGold,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: AppTheme.primaryGold,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscureConfirmPassword = !obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                      filled: true,
+                      fillColor: AppTheme.lightBlue,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold.withOpacity(0.3),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: AppTheme.primaryGold,
+                          width: 2,
+                        ),
+                      ),
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'لطفاً تأیید رمز عبور را وارد کنید';
+                      }
+                      if (value != newPasswordController.text) {
+                        return 'رمز عبور و تأیید آن مطابقت ندارند';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: Text(
+                    'انصراف',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (newPasswordController.text.trim().isEmpty ||
+                              confirmPasswordController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('لطفاً تمام فیلدها را پر کنید'),
+                                backgroundColor: AppTheme.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (newPasswordController.text !=
+                              confirmPasswordController.text) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'رمز عبور و تأیید آن مطابقت ندارند',
+                                ),
+                                backgroundColor: AppTheme.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => isLoading = true);
+
+                          try {
+                            // تغییر رمز عبور
+                            await ApiService.changePassword(
+                              username,
+                              newPasswordController.text.trim(),
+                            );
+
+                            Navigator.of(context).pop();
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'رمز عبور با موفقیت تغییر یافت. حالا می‌توانید با رمز عبور جدید وارد شوید.',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 5),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'خطا در تغییر رمز عبور: ${e.toString()}',
+                                ),
+                                backgroundColor: AppTheme.redAccent,
+                              ),
+                            );
+                          } finally {
+                            setState(() => isLoading = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black,
+                            ),
+                          ),
+                        )
+                      : Text('تغییر رمز عبور'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -1,11 +1,11 @@
 {
-    "name": "app_post",
-    "short_name": "app_post",
+    "name": "ارسال پست - App Post",
+    "short_name": "ارسال پست",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "ارسال پست - App Post",
+    "description": "سیستم مدیریت محتوا و ارسال پست",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
