@@ -269,21 +269,22 @@ switch ($action) {
       $token = generateJwt($user['id'], $user['username'], $user['role']);
       error_log("Generated token for user " . $user['username'] . ": " . $token);
 
-      echo json_encode([
-          'success' => true,
-          'user' => [
-              'id' => $user['id'],
-              'username' => $user['username'],
-              'email' => $user['email'],
-              'full_name' => $user['full_name'],
-              'role' => $user['role'],
-              'is_active' => $user['is_active'],
-              'last_active' => $user['last_active'] ?? null,
-              // Online if last_active within window
-              'is_online' => isset($user['last_active']) ? (time() - strtotime($user['last_active']) < ONLINE_WINDOW_MINUTES * 60) : false,
-          ],
-          'token' => $token
-      ]);
+             echo json_encode([
+           'success' => true,
+           'user' => [
+               'id' => $user['id'],
+               'username' => $user['username'],
+               'email' => $user['email'],
+               'name' => $user['name'],
+               'full_name' => $user['full_name'],
+               'role' => $user['role'],
+               'is_active' => $user['is_active'],
+               'last_active' => $user['last_active'] ?? null,
+               // Online if last_active within window
+               'is_online' => isset($user['last_active']) ? (time() - strtotime($user['last_active']) < ONLINE_WINDOW_MINUTES * 60) : false,
+           ],
+           'token' => $token
+       ]);
       break;
 
   case 'get_users':
@@ -353,7 +354,7 @@ switch ($action) {
           exit();
       }
 
-      $select = "id, username, email, full_name, role, is_active";
+                             $select = "id, username, email, name, full_name, role, is_active";
       $select .= $hasCreatedAt ? ", created_at" : ", NULL AS created_at";
       if ($hasLastActive) {
           $select .= ", last_active, IF(last_active IS NOT NULL AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < " . ONLINE_WINDOW_MINUTES . ", 1, 0) AS is_online";
@@ -367,30 +368,31 @@ switch ($action) {
 
       try {
           // استفاده از کوئری کامل با محاسبه وضعیت آنلاین بودن
-          $sql = "SELECT 
-                      id, 
-                      username, 
-                      email, 
-                      full_name, 
-                      role, 
-                      is_active,
-                      last_active,
-                      CASE 
-                          WHEN last_active IS NOT NULL 
-                          AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
-                          THEN 1 
-                          ELSE 0 
-                      END AS is_online
-                  FROM users 
-                  ORDER BY 
-                      CASE 
-                          WHEN last_active IS NOT NULL 
-                          AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
-                          THEN 1 
-                          ELSE 0 
-                      END DESC,
-                      COALESCE(last_active, '1970-01-01 00:00:00') DESC
-                  LIMIT $limit OFFSET $offset";
+                     $sql = "SELECT 
+                       id, 
+                       username, 
+                       email, 
+                       name, 
+                       full_name, 
+                       role, 
+                       is_active,
+                       last_active,
+                       CASE 
+                           WHEN last_active IS NOT NULL 
+                           AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
+                           THEN 1 
+                           ELSE 0 
+                       END AS is_online
+                   FROM users 
+                   ORDER BY 
+                       CASE 
+                           WHEN last_active IS NOT NULL 
+                           AND TIMESTAMPDIFF(MINUTE, last_active, NOW()) < $window 
+                           THEN 1 
+                           ELSE 0 
+                       END DESC,
+                       COALESCE(last_active, '1970-01-01 00:00:00') DESC
+                   LIMIT $limit OFFSET $offset";
           $stmt = $pdo->query($sql);
           $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
       } catch (Exception $e) {
@@ -428,6 +430,7 @@ switch ($action) {
                 id,
                 username,
                 email,
+                name,
                 full_name,
                 role,
                 is_active,
@@ -532,6 +535,7 @@ switch ($action) {
       $user_id = intval($input['user_id'] ?? 0);
       $username = trim($input['username'] ?? '');
       $email = trim($input['email'] ?? '');
+      $name = trim($input['name'] ?? '');
       $full_name = trim($input['full_name'] ?? '');
       $role = trim($input['role'] ?? 'user');
       $is_active = intval($input['is_active'] ?? 1);
@@ -543,15 +547,16 @@ switch ($action) {
       }
 
       // Debug: چاپ اطلاعات دریافتی
-      error_log("update_user - Received data: " . json_encode([
-          'user_id' => $user_id,
-          'username' => $username,
-          'email' => $email,
-          'full_name' => $full_name,
-          'role' => $role,
-          'is_active' => $is_active,
-          'has_password' => !empty($password)
-      ]));
+             error_log("update_user - Received data: " . json_encode([
+           'user_id' => $user_id,
+           'username' => $username,
+           'email' => $email,
+           'name' => $name,
+           'full_name' => $full_name,
+           'role' => $role,
+           'is_active' => $is_active,
+           'has_password' => !empty($password)
+       ]));
 
       try {
           // بررسی وجود کاربر
@@ -579,6 +584,9 @@ switch ($action) {
 
           $updateFields[] = "email = ?";
           $params[] = $email;
+
+          $updateFields[] = "name = ?";
+          $params[] = $name;
 
           $updateFields[] = "full_name = ?";
           $params[] = $full_name;
@@ -643,6 +651,7 @@ switch ($action) {
 
       $username = trim($input['username'] ?? '');
       $email = trim($input['email'] ?? '');
+      $name = trim($input['name'] ?? '');
       $full_name = trim($input['full_name'] ?? '');
       $role = trim($input['role'] ?? 'user');
       $password = trim($input['password'] ?? '');
@@ -671,9 +680,9 @@ switch ($action) {
         }
 
         // Correct INSERT statement with 5 placeholders for 5 values
-        $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, NOW())");
+                 $stmt = $pdo->prepare("INSERT INTO users (username, email, password, name, full_name, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())");
 
-        if ($stmt->execute([$username, $email, $passwordHash, $full_name, $role])) {
+         if ($stmt->execute([$username, $email, $passwordHash, $name, $full_name, $role])) {
             echo json_encode(['success' => true, 'message' => 'کاربر جدید با موفقیت ایجاد شد.']);
         } else {
             // This part is less likely to be reached if PDO is in exception mode
@@ -863,6 +872,7 @@ switch ($action) {
       $user_id = intval($input['user_id'] ?? 0);
       $username = trim($input['username'] ?? '');
       $email = trim($input['email'] ?? '');
+      $name = trim($input['name'] ?? '');
       $full_name = trim($input['full_name'] ?? '');
       $role = trim($input['role'] ?? 'user');
       $is_active = intval($input['is_active'] ?? 1);
@@ -892,9 +902,9 @@ switch ($action) {
           }
 
           // Update user
-          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, role = ?, is_active = ? WHERE id = ?");
-          
-          if ($stmt->execute([$username, $email, $full_name, $role, $is_active, $user_id])) {
+                     $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, name = ?, full_name = ?, role = ?, is_active = ? WHERE id = ?");
+           
+           if ($stmt->execute([$username, $email, $name, $full_name, $role, $is_active, $user_id])) {
               echo json_encode(['success' => true, 'message' => 'کاربر با موفقیت به‌روزرسانی شد.']);
           } else {
               echo json_encode(['success' => false, 'message' => 'خطا در به‌روزرسانی کاربر.']);
@@ -998,6 +1008,231 @@ switch ($action) {
           echo json_encode(['success' => true, 'message' => 'پست با موفقیت به‌روزرسانی شد.']);
       } else {
           echo json_encode(['success' => false, 'message' => 'خطا در به‌روزرسانی پست.']);
+      }
+      break;
+
+  case 'change_password':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $username = trim($input['username'] ?? '');
+      $new_password = trim($input['new_password'] ?? '');
+
+      if ($username === '' || $new_password === '') {
+          echo json_encode(['success' => false, 'message' => 'نام کاربری و رمز عبور جدید الزامی است.']);
+          exit();
+      }
+
+      if (strlen($new_password) < 6) {
+          echo json_encode(['success' => false, 'message' => 'رمز عبور باید حداقل ۶ کاراکتر باشد.']);
+          exit();
+      }
+
+      try {
+          // Check if user exists
+          $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? AND is_active = 1");
+          $stmt->execute([$username]);
+          $user = $stmt->fetch();
+          
+          if (!$user) {
+              echo json_encode(['success' => false, 'message' => 'کاربر یافت نشد.']);
+              exit();
+          }
+
+          // Hash the new password
+          $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+          
+          // Update password
+          $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+          
+          if ($stmt->execute([$hashed_password, $user['id']])) {
+              echo json_encode(['success' => true, 'message' => 'رمز عبور با موفقیت تغییر یافت.']);
+          } else {
+              echo json_encode(['success' => false, 'message' => 'خطا در تغییر رمز عبور.']);
+          }
+      } catch (PDOException $e) {
+          error_log("change_password: Database error: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس هنگام تغییر رمز عبور.']);
+      }
+      break;
+
+  case 'request_password_reset':
+      if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+          echo json_encode(['success' => false, 'message' => 'Only POST method allowed']);
+          exit();
+      }
+
+      $username = trim($input['username'] ?? '');
+
+      if ($username === '') {
+          echo json_encode(['success' => false, 'message' => 'نام کاربری الزامی است.']);
+          exit();
+      }
+
+      try {
+          // Check if user exists
+          $stmt = $pdo->prepare("SELECT id, email FROM users WHERE username = ? AND is_active = 1");
+          $stmt->execute([$username]);
+          $user = $stmt->fetch();
+          
+          if (!$user) {
+              echo json_encode(['success' => false, 'message' => 'کاربر یافت نشد.']);
+              exit();
+          }
+
+          // Generate reset token
+          $reset_token = bin2hex(random_bytes(32));
+          $reset_expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+          
+          // Store reset token in database
+          $stmt = $pdo->prepare("UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?");
+          
+          if ($stmt->execute([$reset_token, $reset_expires, $user['id']])) {
+              // Here you would typically send an email with the reset link
+              // For now, we'll just return success
+              echo json_encode([
+                  'success' => true, 
+                  'message' => 'درخواست تغییر رمز عبور ارسال شد. لطفاً ایمیل خود را بررسی کنید.',
+                  'reset_token' => $reset_token // Remove this in production
+              ]);
+          } else {
+              echo json_encode(['success' => false, 'message' => 'خطا در ارسال درخواست تغییر رمز عبور.']);
+          }
+      } catch (PDOException $e) {
+          error_log("request_password_reset: Database error: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس هنگام ارسال درخواست تغییر رمز عبور.']);
+      }
+      break;
+
+  case 'get_user_posts':
+      if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+          echo json_encode(['success' => false, 'message' => 'Only GET method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload) {
+          echo json_encode(['success' => false, 'message' => 'احراز هویت نشده']);
+          exit();
+      }
+
+      $user_id = intval($_GET['user_id'] ?? 0);
+      $limit = intval($_GET['limit'] ?? 10);
+      $offset = intval($_GET['offset'] ?? 0);
+
+      if (!$user_id) {
+          echo json_encode(['success' => false, 'message' => 'شناسه کاربر الزامی است']);
+          exit();
+      }
+
+      try {
+                     // Get posts for the specified user
+           $sql = "SELECT 
+                       p.id,
+                       p.title,
+                       p.content,
+                       p.category,
+                       p.created_at,
+                       p.updated_at,
+                       u.username as author_name,
+                       u.name as author_name_short,
+                       u.full_name as author_full_name
+                   FROM posts p
+                   JOIN users u ON p.author_id = u.id
+                   WHERE p.author_id = ?
+                   ORDER BY p.created_at DESC
+                   LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+           
+           $stmt = $pdo->prepare($sql);
+           $stmt->execute([$user_id]);
+          $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+          // Get total count
+          $countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM posts WHERE author_id = ?");
+          $countStmt->execute([$user_id]);
+          $total = $countStmt->fetch()['total'];
+
+          echo json_encode([
+              'success' => true,
+              'posts' => $posts,
+              'total' => $total,
+              'limit' => $limit,
+              'offset' => $offset
+          ]);
+      } catch (PDOException $e) {
+          error_log("get_user_posts: Database error: " . $e->getMessage());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس']);
+      }
+      break;
+
+  case 'get_today_posts':
+      if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+          echo json_encode(['success' => false, 'message' => 'Only GET method allowed']);
+          exit();
+      }
+
+      $payload = getAuthPayload();
+      if (!$payload) {
+          echo json_encode(['success' => false, 'message' => 'احراز هویت نشده']);
+          exit();
+      }
+
+      if ($payload['role'] !== 'admin') {
+          echo json_encode(['success' => false, 'message' => 'دسترسی غیرمجاز - فقط ادمین اجازه دارد']);
+          exit();
+      }
+
+      $limit = intval($_GET['limit'] ?? 10);
+      $offset = intval($_GET['offset'] ?? 0);
+
+      try {
+          // First, check if posts table exists
+          $checkTable = $pdo->query("SHOW TABLES LIKE 'posts'");
+          if ($checkTable->rowCount() == 0) {
+              error_log("get_today_posts: Posts table does not exist");
+              echo json_encode(['success' => false, 'message' => 'جدول پست‌ها وجود ندارد']);
+              exit();
+          }
+
+                     // Get posts created today
+           $sql = "SELECT 
+                       p.id,
+                       p.title,
+                       p.content,
+                       p.category,
+                       p.created_at,
+                       p.updated_at,
+                       u.username as author_name,
+                       u.name as author_name_short,
+                       u.full_name as author_full_name
+                   FROM posts p
+                   JOIN users u ON p.author_id = u.id
+                   WHERE DATE(p.created_at) = CURDATE()
+                   ORDER BY p.created_at DESC
+                   LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+           
+           $stmt = $pdo->prepare($sql);
+           $stmt->execute();
+          $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+          // Get total count for today
+          $countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM posts WHERE DATE(created_at) = CURDATE()");
+          $countStmt->execute();
+          $total = $countStmt->fetch()['total'];
+
+          echo json_encode([
+              'success' => true,
+              'posts' => $posts,
+              'total' => $total,
+              'limit' => $limit,
+              'offset' => $offset
+          ]);
+      } catch (PDOException $e) {
+          error_log("get_today_posts: Database error: " . $e->getMessage());
+          error_log("get_today_posts: SQL State: " . $e->getCode());
+          echo json_encode(['success' => false, 'message' => 'خطای دسترسی به دیتابیس: ' . $e->getMessage()]);
       }
       break;
 

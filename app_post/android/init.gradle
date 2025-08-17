@@ -1,36 +1,26 @@
-// Force plugin repositories and buildscript repos to China mirrors to bypass blocked hosts
-gradle.settingsEvaluated { s ->
-    try {
-        s.pluginManagement.repositories.clear()
-    } catch (ignored) {}
-    s.pluginManagement.repositories { repos ->
-        repos.maven { url = uri('https://maven.aliyun.com/repository/google') }
-        repos.maven { url = uri('https://maven.aliyun.com/repository/central') }
-        repos.maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
-        repos.google()
-        repos.mavenCentral()
-        repos.gradlePluginPortal()
-    }
-}
-
-gradle.beforeProject { p ->
-    p.buildscript.repositories.clear()
-    p.buildscript.repositories {
-        maven { url = uri('https://maven.aliyun.com/repository/google') }
-        maven { url = uri('https://maven.aliyun.com/repository/central') }
-        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
-        google()
-        mavenCentral()
-    }
-    if (p.hasProperty('repositories')) {
-        try { p.repositories.clear() } catch (ignored) {}
-        p.repositories {
-            maven { url = uri('https://maven.aliyun.com/repository/google') }
-            maven { url = uri('https://maven.aliyun.com/repository/central') }
-            maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
-            google()
-            mavenCentral()
+allprojects {
+    repositories {
+        def ALIYUN_REPOSITORY_URL = 'https://maven.aliyun.com/repository'
+        def ALIYUN_JCENTER_URL = 'https://maven.aliyun.com/repository/public'
+        all { ArtifactRepository repo ->
+            if (repo instanceof MavenArtifactRepository) {
+                def url = repo.url.toString()
+                if (url.startsWith('https://repo1.maven.org/maven2/')) {
+                    project.logger.lifecycle "Repository ${repo.name} replaced by $ALIYUN_REPOSITORY_URL/public."
+                    remove repo
+                }
+                if (url.startsWith('https://jcenter.bintray.com/')) {
+                    project.logger.lifecycle "Repository ${repo.name} replaced by $ALIYUN_JCENTER_URL"
+                    remove repo
+                }
+            }
         }
+        maven { url ALIYUN_REPOSITORY_URL + '/public' }
+        maven { url ALIYUN_REPOSITORY_URL + '/google' }
+        maven { url ALIYUN_REPOSITORY_URL + '/gradle-plugin' }
+        maven { url ALIYUN_REPOSITORY_URL + '/spring' }
+        maven { url ALIYUN_REPOSITORY_URL + '/spring-plugin' }
+        maven { url ALIYUN_REPOSITORY_URL + '/apache-snapshots' }
     }
 }
 

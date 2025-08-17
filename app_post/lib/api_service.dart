@@ -109,6 +109,7 @@ class ApiService {
     required String adminToken,
     required String username,
     required String email,
+    required String name,
     required String fullName,
     required String password,
     String role = 'user',
@@ -124,6 +125,7 @@ class ApiService {
         'action': 'create_user',
         'username': username,
         'email': email,
+        'name': name,
         'full_name': fullName,
         'role': role,
         'password': password,
@@ -151,6 +153,7 @@ class ApiService {
     required int userId,
     required String username,
     required String email,
+    required String name,
     required String fullName,
     required String role,
     required int isActive,
@@ -161,6 +164,7 @@ class ApiService {
       'user_id': userId,
       'username': username,
       'email': email,
+      'name': name,
       'full_name': fullName,
       'role': role,
       'is_active': isActive,
@@ -452,6 +456,264 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('خطا در ارسال درخواست: $e');
+    }
+  }
+
+  // متد بررسی وجود کاربر
+  static Future<bool> checkUserExists(String username) async {
+    try {
+      print('Checking if user exists: $username');
+      print('API URL: $baseUrl');
+
+      // ابتدا با یک رمز عبور موقت تلاش می‌کنیم تا ببینیم کاربر وجود دارد یا نه
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'login',
+          'username': username,
+          'password': 'temp_check_password_123',
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
+      }
+
+      if (response.body.isEmpty) {
+        throw "پاسخ سرور خالی است";
+      }
+
+      final data = jsonDecode(response.body);
+      print('Parsed response data: $data');
+
+      // اگر سرور پیام "نام کاربری یا رمز عبور اشتباه است" بدهد، یعنی کاربر وجود دارد
+      // اگر پیام "کاربری یافت نشد" بدهد، یعنی کاربر وجود ندارد
+      if (data['success'] == false) {
+        final message = data['message'] ?? data['error'] ?? '';
+        if (message.contains('نام کاربری یا رمز عبور اشتباه') ||
+            message.contains('unauthorized') ||
+            message.contains('401')) {
+          print('User exists but password is wrong');
+          return true; // کاربر وجود دارد
+        } else if (message.contains('کاربری یافت نشد') ||
+            message.contains('user not found')) {
+          print('User does not exist');
+          return false; // کاربر وجود ندارد
+        }
+      }
+
+      // اگر موفقیت‌آمیز باشد، یعنی کاربر و رمز عبور درست است
+      if (data['success'] == true) {
+        print('User exists and password is correct');
+        return true;
+      }
+
+      // به طور پیش‌فرض فرض می‌کنیم کاربر وجود دارد
+      print('Assuming user exists by default');
+      return true;
+    } catch (e) {
+      print('Exception during checkUserExists: $e');
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
+      } else if (e.toString().contains('TimeoutException')) {
+        throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
+      } else {
+        throw e.toString();
+      }
+    }
+  }
+
+  // متد تغییر رمز عبور
+  static Future<void> changePassword(
+    String username,
+    String newPassword,
+  ) async {
+    try {
+      print('Changing password for user: $username');
+      print('API URL: $baseUrl');
+
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'change_password',
+          'username': username,
+          'new_password': newPassword,
+        }),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
+      }
+
+      if (response.body.isEmpty) {
+        throw "پاسخ سرور خالی است";
+      }
+
+      final data = jsonDecode(response.body);
+      print('Parsed response data: $data');
+
+      if (data['success'] != true) {
+        throw data['message'] ?? 'خطا در تغییر رمز عبور';
+      }
+    } catch (e) {
+      print('Exception during changePassword: $e');
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
+      } else if (e.toString().contains('TimeoutException')) {
+        throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
+      } else {
+        throw e.toString();
+      }
+    }
+  }
+
+  // متد درخواست تغییر رمز عبور
+  static Future<void> requestPasswordReset(String username) async {
+    try {
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'request_password_reset',
+          'username': username,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
+      }
+
+      if (response.body.isEmpty) {
+        throw "پاسخ سرور خالی است";
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data['success'] != true) {
+        throw data['message'] ?? 'خطا در ارسال درخواست تغییر رمز عبور';
+      }
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
+      } else if (e.toString().contains('TimeoutException')) {
+        throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
+      } else {
+        throw e.toString();
+      }
+    }
+  }
+
+  // متد دریافت پست‌های کاربر
+  static Future<Map<String, dynamic>> getUserPosts({
+    required String token,
+    required int userId,
+    int limit = 10,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl?action=get_user_posts&user_id=$userId&limit=$limit&offset=$offset',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
+      }
+
+      if (response.body.isEmpty) {
+        throw "پاسخ سرور خالی است";
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (data['success'] != true) {
+        throw data['message'] ?? 'خطا در دریافت پست‌های کاربر';
+      }
+
+      return data;
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
+      } else if (e.toString().contains('TimeoutException')) {
+        throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
+      } else {
+        throw e.toString();
+      }
+    }
+  }
+
+  // متد دریافت پست‌های امروز (برای ادمین)
+  static Future<Map<String, dynamic>> getTodayPosts({
+    required String adminToken,
+    int limit = 10,
+    int offset = 0,
+  }) async {
+    print('🌐 getTodayPosts called with token: ${adminToken.isNotEmpty ? "Present" : "Missing"}');
+    print('🌐 URL: $baseUrl?action=get_today_posts&limit=$limit&offset=$offset');
+    
+    try {
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl?action=get_today_posts&limit=$limit&offset=$offset',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $adminToken',
+        },
+      );
+
+      print('📡 HTTP Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        print('❌ HTTP Error: ${response.statusCode} - ${response.reasonPhrase}');
+        throw "خطای HTTP: ${response.statusCode} - ${response.reasonPhrase}";
+      }
+
+      if (response.body.isEmpty) {
+        print('❌ Empty response body');
+        throw "پاسخ سرور خالی است";
+      }
+
+      final data = jsonDecode(response.body);
+      print('📊 Parsed data: $data');
+
+      if (data['success'] != true) {
+        print('❌ API Error: ${data['message']}');
+        throw data['message'] ?? 'خطا در دریافت پست‌های امروز';
+      }
+
+      print('✅ API call successful');
+      return data;
+    } catch (e) {
+      print('❌ Exception in getTodayPosts: $e');
+      print('❌ Exception type: ${e.runtimeType}');
+      
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        throw "خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.";
+      } else if (e.toString().contains('TimeoutException')) {
+        throw "زمان اتصال به پایان رسید. لطفاً دوباره تلاش کنید.";
+      } else {
+        throw e.toString();
+      }
     }
   }
 }

@@ -50,6 +50,11 @@ class _UserPanelState extends State<UserPanel>
   List<String> _searchResults = [];
   String? _searchError;
 
+  // User activity data
+  List<Map<String, dynamic>> _userPosts = [];
+  bool _loadingUserPosts = false;
+  String? _userPostsError;
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +62,7 @@ class _UserPanelState extends State<UserPanel>
     _tabController.addListener(_handleTabSelection);
     _startHeartbeat();
     _fetchTemplates();
+    _fetchUserPosts();
   }
 
   void _handleTabSelection() {
@@ -114,6 +120,27 @@ class _UserPanelState extends State<UserPanel>
     }
   }
 
+  Future<void> _fetchUserPosts() async {
+    setState(() {
+      _loadingUserPosts = true;
+      _userPostsError = null;
+    });
+    try {
+      final data = await ApiService.getUserPosts(
+        token: widget.currentUser.token ?? '',
+        userId: widget.currentUser.id,
+        limit: 20,
+      );
+      setState(() {
+        _userPosts = List<Map<String, dynamic>>.from(data['posts'] ?? []);
+      });
+    } catch (e) {
+      setState(() => _userPostsError = e.toString());
+    } finally {
+      setState(() => _loadingUserPosts = false);
+    }
+  }
+
   Future<void> _sendPost() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -152,6 +179,7 @@ class _UserPanelState extends State<UserPanel>
       if (mounted) {
         _showSuccessSnackBar('پست با موفقیت ارسال شد!');
         _clearForm();
+        await _fetchUserPosts(); // Refresh user posts
       }
     } catch (e) {
       setState(() {
@@ -412,9 +440,274 @@ class _UserPanelState extends State<UserPanel>
               ),
             ),
           ),
+
+          const SizedBox(height: 32),
+
+          // User Activity Section
+          Text(
+            'پست‌های من',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _buildUserActivityCard(),
         ],
       ),
     );
+  }
+
+  Widget _buildUserActivityCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.post_add,
+                  color: Theme.of(context).primaryColor,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'پست‌های من',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const Spacer(),
+                if (_loadingUserPosts)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (_userPostsError != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _userPostsError!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_userPosts.isEmpty && !_loadingUserPosts)
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'هنوز هیچ پستی ارسال نکرده‌اید',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: _userPosts.take(5).map((post) {
+                  final category = post['category'] ?? 'عمومی';
+                  final createdAt =
+                      DateTime.tryParse(post['created_at'] ?? '') ??
+                      DateTime.now();
+                  final timeAgo = _getTimeAgo(createdAt);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).primaryColor.withOpacity(0.1),
+                              child: Icon(
+                                Icons.article,
+                                color: Theme.of(context).primaryColor,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    post['title'] ?? 'بدون عنوان',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey[800],
+                                        ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'دسته‌بندی: $category',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(
+                                  category,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _getCategoryColor(
+                                    category,
+                                  ).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                category,
+                                style: TextStyle(
+                                  color: _getCategoryColor(category),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          post['content'] ?? 'بدون محتوا',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.grey[600], height: 1.4),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              timeAgo,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.grey[500]),
+                            ),
+                            Icon(
+                              Icons.access_time,
+                              color: Colors.grey[500],
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            if (_userPosts.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Center(
+                  child: Text(
+                    'و ${_userPosts.length - 5} پست دیگر...',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'همین الان';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} دقیقه پیش';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ساعت پیش';
+    } else {
+      return '${difference.inDays} روز پیش';
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'music':
+      case 'موسیقی':
+        return Colors.purple;
+      case 'news':
+      case 'خبر':
+        return Colors.blue;
+      case 'article':
+      case 'مقاله':
+        return Colors.green;
+      case 'review':
+      case 'بررسی':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildPostsTab() {
@@ -815,6 +1108,7 @@ class _UserPanelState extends State<UserPanel>
             onPressed: () {
               if (_tabController.index == 0) {
                 // Refresh dashboard
+                _fetchUserPosts();
               } else if (_tabController.index == 1) {
                 _fetchTemplates();
               }

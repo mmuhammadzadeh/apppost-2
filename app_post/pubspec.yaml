@@ -1,10 +1,10 @@
 name: app_post
-description: "App Post - ارسال پست"
+description: "ارسال پست - سیستم مدیریت محتوا"
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: '>=3.8.1 <4.0.0'
 
 dependencies:
   flutter:
@@ -12,7 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.1
   crypto: ^3.0.3
-  shared_preferences: ^2.2.2
+  # shared_preferences: ^2.3.2  # Temporarily disabled due to build issues
   # file_picker: ^5.3.1  # Temporarily disabled due to build issues
 
 
@@ -20,6 +20,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.7
 
 flutter:
   uses-material-design: true
@@ -28,7 +30,7 @@ flutter:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: web/icons/Icon-512.png
+  image: android/app/src/main/res/drawable/website.png
   android: true
   ios: false
   web: true
@@ -36,6 +38,6 @@ flutter_native_splash:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "web/icons/Icon-512.png"
+  image_path: "android/app/src/main/res/drawable/website.png"
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "web/icons/Icon-192.png"
+  adaptive_icon_foreground: "android/app/src/main/res/drawable/website.png"

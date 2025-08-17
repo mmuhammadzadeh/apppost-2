@@ -2,6 +2,7 @@ class User {
   final int id;
   final String username;
   final String email;
+  final String name;
   final String fullName;
   final String role;
   final int isActive;
@@ -15,6 +16,7 @@ class User {
     required this.id,
     required this.username,
     required this.email,
+    required this.name,
     required this.fullName,
     required this.role,
     required this.isActive,
@@ -31,6 +33,7 @@ class User {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
+      name: json['name'] ?? '',
       fullName: json['full_name'] ?? '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
@@ -52,6 +55,7 @@ class User {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
+      name: json['name'] ?? '',
       fullName: json.containsKey('full_name') ? json['full_name'] ?? '' : '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
@@ -74,6 +78,7 @@ extension UserJson on User {
       'id': id,
       'username': username,
       'email': email,
+      'name': name,
       'full_name': fullName,
       'role': role,
       'is_active': isActive,
@@ -90,6 +95,7 @@ extension UserJson on User {
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       username: json['username'] ?? '',
       email: json['email'] ?? '',
+      name: json['name'] ?? '',
       fullName: json.containsKey('full_name') ? json['full_name'] ?? '' : '',
       role: json['role'] ?? '',
       isActive: int.tryParse(json['is_active']?.toString() ?? '0') ?? 0,
